@@ -667,8 +667,10 @@ async function libDoc(f) {
       const page = await d.getPage(p);
       const vp = page.getViewport({ scale: 1 });
       const c = await renderToCanvas(page, vp.width * 2.2);
-      const jpg = await new Promise(r => c.toBlob(r, "image/jpeg", .92));
-      const img = await out.embedJpg(await jpg.arrayBuffer());
+      // Some engines (Playwright's Linux WebKit) hand back PNG even when JPEG is requested;
+      // embed whatever the bytes actually are, not what we asked for.
+      const bytes = new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/jpeg", .92))).arrayBuffer());
+      const img = bytes[0] === 0x89 && bytes[1] === 0x50 ? await out.embedPng(bytes) : await out.embedJpg(bytes);
       out.addPage([vp.width, vp.height]).drawImage(img, { x: 0, y: 0, width: vp.width, height: vp.height });
     }
     return out;
