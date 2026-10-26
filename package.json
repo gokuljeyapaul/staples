@@ -1,0 +1,23 @@
+{
+  "name": "staple",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Single-page PDF merger that repeats *_N_copies files N times",
+  "type": "module",
+  "scripts": {
+    "serve": "node scripts/serve.js",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --project=chromium --project=mobile",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:all": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.48.2",
+    "jszip": "3.10.1",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "3.11.174",
+    "vitest": "2.1.4"
+  }
+}

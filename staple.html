@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Staple — one PDF to rule the paperwork</title>
+<meta name="theme-color" content="#2B2FD9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16123A;          /* text */
+  --ink-soft:#5A5878;
+  --paper:#F6F7FB;        /* page bg */
+  --card:#FFFFFF;
+  --line:#DCDDEA;
+  --stamp:#2B2FD9;        /* electric visa-stamp blue */
+  --stamp-ink:#FFFFFF;
+  --hi:#FFE14D;           /* highlighter */
+  --danger:#D92D20;
+  --shadow:0 1px 0 rgba(22,18,58,.06), 0 8px 24px -12px rgba(22,18,58,.25);
+  --font:"Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#ECEBFF; --ink-soft:#A3A1C7; --paper:#14122B; --card:#1E1B3D; --line:#34305E;
+    --stamp:#7C80FF; --stamp-ink:#0F0D24; --hi:#FFE14D; --danger:#FF6B5E;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#ECEBFF; --ink-soft:#A3A1C7; --paper:#14122B; --card:#1E1B3D; --line:#34305E;
+  --stamp:#7C80FF; --stamp-ink:#0F0D24; --hi:#FFE14D; --danger:#FF6B5E;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--hi);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+[hidden]{display:none!important}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--paper)}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:2px solid var(--ink);display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:12px clamp(14px,3vw,28px)}
+.brand{display:flex;align-items:center;gap:12px;margin-right:auto;min-width:0}
+.brand h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.brand p{margin:2px 0 0;color:var(--ink-soft);font-size:13px;max-width:44ch}
+.logo{width:42px;height:42px;flex:none;border-radius:12px;background:var(--stamp);display:grid;place-items:center;transform:rotate(-8deg);box-shadow:3px 3px 0 var(--ink)}
+.logo svg{width:26px;height:26px}
+.status{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;white-space:nowrap}
+.status .dot{width:10px;height:10px;border-radius:50%;background:var(--ink-soft)}
+.status.busy .dot{background:var(--hi);animation:pulse 1s infinite}
+.status.ready .dot{background:#1A9E5C}
+.status.err .dot{background:var(--danger)}
+@keyframes pulse{50%{transform:scale(1.6);opacity:.5}}
+.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fname{display:flex;align-items:center;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:0 4px 0 12px;height:42px}
+.fname span{font-size:12px;color:var(--ink-soft);margin-right:6px;white-space:nowrap}
+.fname input{border:0;background:transparent;width:min(240px,42vw);height:100%;outline:none}
+.btn{height:42px;padding:0 16px;border-radius:12px;border:2px solid var(--ink);background:var(--card);font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:transform .12s, box-shadow .12s}
+.btn:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+.btn:active:not(:disabled){transform:none;box-shadow:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--stamp);color:var(--stamp-ink);border-color:var(--ink)}
+.btn.icon{width:42px;padding:0;justify-content:center}
+.btn.small{height:32px;padding:0 10px;border-radius:9px;font-size:13px;border-width:1.5px}
+.qtools,.danger-zone{display:flex;gap:6px;flex-wrap:wrap}
+.btn.ghost-danger{color:var(--danger);border-color:var(--danger)}
+.btn.ghost-danger:hover:not(:disabled){background:var(--danger);color:#fff;box-shadow:3px 3px 0 var(--ink)}
+.danger-zone{padding-top:12px;border-top:1.5px dashed var(--line)}
+
+/* ---------- layout ---------- */
+.layout{display:grid;grid-template-columns:minmax(290px,360px) 1fr;gap:0;min-height:calc(100vh - 70px)}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+.queue{border-right:2px solid var(--ink);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (max-width:860px){.queue{border-right:0;border-bottom:2px solid var(--ink)}}
+.drop{position:relative;border:2.5px dashed var(--ink);border-radius:18px;padding:18px;background:var(--card);text-align:center;transition:background .15s, transform .15s}
+.drop.over{background:var(--hi);color:#16123A;transform:rotate(-1deg) scale(1.01)}
+.drop h2{margin:0 0 2px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.drop p{margin:0 0 12px;color:var(--ink-soft);font-size:13px}
+.drop.over p{color:#16123A}
+.drop .row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.qhead{display:flex;align-items:baseline;gap:8px}
+.qhead h2{margin:0;font-size:18px;font-weight:800}
+.qhead span{color:var(--ink-soft);font-size:13px;margin-right:auto}
+.files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.file{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;background:var(--card);border:1.5px solid var(--line);border-left:8px solid var(--c);border-radius:12px;padding:8px 8px 8px 10px;cursor:grab;transition:border-color .15s, background .15s}
+.file:hover,.file.focus{border-color:var(--ink);border-left-color:var(--c)}
+.file.dragging{opacity:.4}
+.file.drop-before{box-shadow:0 -4px 0 var(--stamp)}
+.file.drop-after{box-shadow:0 4px 0 var(--stamp)}
+.file .order{display:flex;flex-direction:column;gap:2px}
+.file .order button{width:22px;height:18px;border:0;background:none;color:var(--ink-soft);padding:0;line-height:1;border-radius:4px;font-size:11px}
+.file .order button:hover{background:var(--paper);color:var(--ink)}
+.file .name{min-width:0}
+.file .name b{display:block;font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .name small{color:var(--ink-soft);font-size:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.chip.auto{background:var(--hi);border-color:#16123A;color:#16123A}
+.chip.warn{background:#FFE4E1;border-color:var(--danger);color:#8A1C12}
+.right{display:flex;align-items:center;gap:4px}
+.stepper{display:flex;align-items:center;border:1.5px solid var(--ink);border-radius:10px;overflow:hidden;height:30px}
+.stepper button{width:26px;height:100%;border:0;background:var(--card);font-weight:800}
+.stepper button:hover{background:var(--hi);color:#16123A}
+.stepper output{min-width:34px;text-align:center;font-weight:800;font-size:14px}
+.x{width:28px;height:28px;border:0;background:none;color:var(--ink-soft);border-radius:8px;font-size:16px}
+.x:hover{background:#FFE4E1;color:var(--danger)}
+.storage{margin-top:auto;font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px}
+.meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--stamp);width:0;transition:width .4s}
+
+/* ---------- preview ---------- */
+.preview{min-width:0;padding:18px clamp(14px,3vw,28px) 60px;display:flex;flex-direction:column;gap:18px}
+.ribbon-wrap{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--top-h,70px));z-index:10;background:var(--paper);padding:6px 0 10px}
+.ribbon-label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:6px}
+.ribbon{display:flex;height:34px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--card)}
+.seg{flex-grow:var(--n);flex-basis:0;min-width:6px;background:var(--c);border:0;border-right:2px solid var(--paper);padding:0;position:relative;color:#fff;font-size:11px;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;transition:filter .15s, flex-grow .3s}
+.seg:last-child{border-right:0}
+.seg.copy-cont{border-left:2px dotted rgba(255,255,255,.7)}
+.seg:hover,.seg.lit{filter:brightness(1.15) saturate(1.2)}
+.seg span{padding:0 6px;line-height:30px;text-shadow:0 1px 1px rgba(0,0,0,.35)}
+.ribbon.dim .seg:not(.lit){filter:grayscale(.85) opacity(.45)}
+.tip{position:fixed;pointer-events:none;z-index:60;background:var(--ink);color:var(--paper);padding:6px 9px;border-radius:8px;font-size:12px;max-width:280px;opacity:0;transition:opacity .1s}
+.tip.on{opacity:1}
+
+.block{border-left:6px solid var(--c);padding:4px 0 4px 14px;scroll-margin-top:calc(var(--top-h,70px) + 80px)}
+.block-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;margin-bottom:10px}
+.block-head .range{background:var(--c);color:#fff;font-weight:800;font-size:13px;padding:2px 9px;border-radius:7px;text-shadow:0 1px 1px rgba(0,0,0,.3)}
+.block-head h3{margin:0;font-size:16px;font-weight:700;word-break:break-all}
+.block-head .meta{color:var(--ink-soft);font-size:13px}
+.pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:14px}
+.page{position:relative;background:var(--card);border:2px solid var(--line);border-radius:10px;overflow:hidden;transition:transform .15s, border-color .15s, box-shadow .15s, opacity .15s}
+.page .open{display:block;width:100%;border:0;background:none;padding:0;text-align:left;color:inherit}
+.page .pick,.page .bin{position:absolute;right:6px;width:30px;height:30px;border-radius:9px;border:2px solid var(--ink);background:var(--card);display:grid;place-items:center;padding:0;opacity:0;transition:opacity .12s, transform .12s;z-index:2}
+.page .pick{top:6px}
+.page .bin{top:42px;color:var(--danger)}
+.page:hover .pick,.page:hover .bin,.page .pick:focus-visible,.page .bin:focus-visible,.page.picked .pick,.page.removed .bin,.picking .page .pick{opacity:1}
+@media (hover:none){.page .pick,.page .bin{opacity:1}}
+.page .pick:hover,.page .bin:hover{transform:scale(1.08)}
+.page.picked{border-color:var(--stamp);box-shadow:0 0 0 3px var(--stamp)}
+.page.picked .pick{background:var(--stamp);color:var(--stamp-ink);border-color:var(--stamp)}
+.page.removed{opacity:.55;border-style:dashed}
+.page.removed:hover{opacity:.9}
+.page.removed .thumb img{filter:grayscale(1) contrast(.8)}
+.page.removed .num{background:var(--danger);color:#fff}
+.page.removed .bin{color:#1A9E5C}
+.page .stamp{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-14deg);border:3px solid var(--danger);color:var(--danger);background:color-mix(in srgb, var(--card) 80%, transparent);font-weight:800;font-size:18px;padding:2px 10px;border-radius:8px;pointer-events:none}
+.pagebar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.pagebar .count{font-size:13px;font-weight:700;margin-right:4px}
+.pagebar .spacer{flex:1}
+.block-head .btn.small{margin-left:auto}
+.block.gone .block-head .range{background:var(--danger)}
+.seg.gone{flex-grow:.6;background:repeating-linear-gradient(45deg,var(--c) 0 4px,transparent 4px 8px)}
+.canvas-wrap{position:relative}
+.canvas-wrap.removed canvas{filter:grayscale(1);opacity:.6}
+.canvas-wrap.removed::after{content:"Removed";position:absolute;left:50%;top:30%;transform:translate(-50%,-50%) rotate(-14deg);border:4px solid var(--danger);color:var(--danger);font-weight:800;font-size:34px;padding:4px 18px;border-radius:12px;background:color-mix(in srgb, var(--card) 85%, transparent)}
+.toast{display:flex;align-items:center;gap:12px}
+.toast button{background:none;border:1.5px solid currentColor;color:inherit;border-radius:8px;padding:2px 10px;font-weight:700}
+.page:hover{transform:translateY(-3px) rotate(-.6deg);border-color:var(--ink);box-shadow:4px 4px 0 var(--c)}
+.page.sel{border-color:var(--ink);box-shadow:0 0 0 3px var(--c), 5px 5px 0 var(--ink)}
+.page .thumb{aspect-ratio:1/1.414;background:repeating-linear-gradient(45deg,var(--paper) 0 8px,var(--card) 8px 16px);display:grid;place-items:center}
+.page .thumb img{width:100%;height:100%;object-fit:contain;background:#fff;display:block}
+.page .num{position:absolute;top:6px;left:6px;background:var(--ink);color:var(--paper);font-weight:800;font-size:14px;min-width:28px;height:28px;border-radius:8px;display:grid;place-items:center;padding:0 6px}
+.page .tag{display:flex;justify-content:space-between;gap:6px;background:var(--c);color:#fff;font-size:11px;font-weight:700;padding:5px 7px;text-shadow:0 1px 1px rgba(0,0,0,.3)}
+.page .tag span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preview.dim .block:not(.lit){opacity:.28;filter:grayscale(.7)}
+
+.empty{border:2.5px dashed var(--line);border-radius:22px;padding:clamp(28px,6vw,70px);text-align:left;display:grid;gap:14px;max-width:760px}
+.empty h2{margin:0;font-size:clamp(34px,6vw,64px);line-height:.95;font-weight:800;letter-spacing:-.04em}
+.empty p{margin:0;color:var(--ink-soft);max-width:56ch;font-size:16px}
+.rule{display:flex;gap:10px;flex-wrap:wrap}
+.rule code{font-family:var(--font);font-weight:700;background:var(--hi);color:#16123A;padding:2px 8px;border-radius:6px;border:1.5px solid #16123A}
+
+/* ---------- inspector ---------- */
+.scrim{position:fixed;inset:0;background:rgba(22,18,58,.45);z-index:45;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.inspector{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--card);border-left:2px solid var(--ink);z-index:50;transform:translateX(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 14px)}
+.inspector.on{transform:none}
+.insp-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.insp-head .big{font-size:40px;font-weight:800;letter-spacing:-.04em;line-height:.9}
+.insp-head .big small{font-size:16px;color:var(--ink-soft);font-weight:600;letter-spacing:0}
+.insp-head .grow{flex:1}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:0 0 12px;padding:10px 12px;border-radius:12px;background:var(--paper);border-left:6px solid var(--c)}
+.facts dt{color:var(--ink-soft)}
+.facts dd{margin:0;font-weight:600;word-break:break-all}
+.canvas-wrap{flex:1;min-height:0;overflow:auto;border-radius:12px;background:repeating-linear-gradient(45deg,var(--paper) 0 10px,var(--card) 10px 20px);display:flex;align-items:flex-start;justify-content:center;padding:12px}
+.canvas-wrap canvas{max-width:100%;height:auto;box-shadow:var(--shadow);background:#fff}
+.insp-nav{display:flex;gap:8px;margin-top:12px}
+.insp-nav .btn{flex:1;justify-content:center}
+.insp-note{font-size:12px;color:var(--ink-soft);margin-top:6px}
+
+/* ---------- toasts & dialog ---------- */
+.toasts{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:70;align-items:center;width:max-content;max-width:92vw}
+.toast{background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;font-weight:600;box-shadow:4px 4px 0 var(--stamp);animation:pop .25s cubic-bezier(.2,1.4,.4,1)}
+.toast.bad{box-shadow:4px 4px 0 var(--danger)}
+@keyframes pop{from{transform:translateY(16px) scale(.9);opacity:0}}
+.modal{position:fixed;inset:0;display:none;place-items:center;z-index:80;background:rgba(22,18,58,.5);padding:20px}
+.modal.on{display:grid}
+.modal-card{background:var(--card);border:2px solid var(--ink);border-radius:18px;box-shadow:7px 7px 0 var(--ink);padding:22px;max-width:420px;width:100%}
+.modal-card h2{margin:0 0 6px;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.modal-card p{margin:0 0 18px;color:var(--ink-soft)}
+.modal-card .row{display:flex;gap:8px;justify-content:flex-end}
+.btn.danger{background:var(--danger);color:#fff}
+.spin{width:16px;height:16px;border:2.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
+@keyframes rot{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V6h16v3"/><path d="M4 9v2M20 9v2"/><path d="M7 15h10"/></svg>
+    </div>
+    <div>
+      <h1>Staple</h1>
+      <p>Toss in the paperwork. Get one tidy PDF. Act like it was easy.</p>
+    </div>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">Waiting for paperwork</span></div>
+  <div class="actions">
+    <label class="fname"><span>Save as</span><input id="fname" spellcheck="false" aria-label="Output file name"></label>
+    <button class="btn primary" id="dlBtn" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      Download PDF
+    </button>
+    <button class="btn icon" id="themeBtn" aria-label="Switch light / dark" title="Following your system. Click to switch.">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="queue" aria-label="Source files">
+    <div class="drop" id="drop">
+      <h2>Feed me PDFs</h2>
+      <p>Drop files, a whole folder, or the zip Google Drive gives you. JPG and PNG scans work too.</p>
+      <div class="row">
+        <button class="btn small" id="pickFiles">Pick files</button>
+        <button class="btn small" id="pickFolder">Pick folder</button>
+      </div>
+      <input type="file" id="fileInput" class="sr" multiple accept=".pdf,.zip,.jpg,.jpeg,.png,application/pdf,application/zip,image/jpeg,image/png">
+      <input type="file" id="folderInput" class="sr" webkitdirectory multiple>
+    </div>
+    <div class="qhead"><h2>The pile</h2><span id="qcount">empty</span></div>
+    <div class="qtools">
+      <button class="btn small" id="sortBtn" title="Same order Google Drive shows by name" disabled>Sort A–Z</button>
+      <button class="btn small" id="resetBtn" title="Go back to the copy counts in the file names" disabled>Reset copies</button>
+    </div>
+    <ol class="files" id="fileList" aria-label="Files in merge order. Drag to reorder."></ol>
+    <div class="storage">
+      <div class="danger-zone">
+        <button class="btn small ghost-danger" id="clearFilesBtn" title="Empty the pile and its saved copies" disabled>Clear files</button>
+        <button class="btn small ghost-danger" id="clearStorageBtn" title="Wipe everything this app saved in this browser">Clear browser storage</button>
+      </div>
+      <div id="storageText">Stored only in this browser.</div>
+      <div class="meter"><i id="meter"></i></div>
+    </div>
+  </aside>
+
+  <section class="preview" id="preview" aria-label="Merged PDF preview">
+    <div class="ribbon-wrap" id="ribbonWrap" hidden>
+      <div class="ribbon-label"><span>Page map of the merged PDF</span><span id="ribbonTotal"></span></div>
+      <div class="ribbon" id="ribbon"></div>
+      <div class="pagebar" id="pagebar" aria-label="Page actions">
+        <span class="count" id="pickCount" aria-live="polite">No pages selected</span>
+        <button class="btn small" id="selectAllBtn">Select all</button>
+        <button class="btn small" id="selectNoneBtn" disabled>Clear selection</button>
+        <button class="btn small ghost-danger" id="removeSelBtn" disabled>Remove selected</button>
+        <button class="btn small" id="restoreSelBtn" disabled>Restore selected</button>
+        <span class="spacer"></span>
+        <button class="btn small" id="restoreAllBtn" disabled>Restore all removed</button>
+      </div>
+    </div>
+    <div id="blocks"></div>
+    <div class="empty" id="empty">
+      <h2>Nothing to staple yet.</h2>
+      <p>Drop your documents on the left. Anything named like <b>Ticket_3_Copies.pdf</b> goes in three times. Everything else goes in once. You can overrule me per file, I won’t sulk.</p>
+      <div class="rule"><code>_2_copies</code><code>_3_Copies</code><code>_10_copies</code></div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="inspector" id="inspector" aria-label="Page inspector" aria-hidden="true">
+  <div class="insp-head">
+    <div class="grow"><div class="big" id="inspNum">1 <small>of 1</small></div></div>
+    <button class="btn icon" id="inspClose" aria-label="Close inspector">✕</button>
+  </div>
+  <dl class="facts" id="inspFacts"></dl>
+  <div class="canvas-wrap" id="canvasWrap"><canvas id="inspCanvas"></canvas></div>
+  <div class="insp-nav">
+    <button class="btn ghost-danger" id="inspToggle">Remove page</button>
+  </div>
+  <div class="insp-nav">
+    <button class="btn" id="inspPrev">← Previous</button>
+    <button class="btn" id="inspNext">Next →</button>
+  </div>
+  <div class="insp-note">Rendered from the actual merged PDF, so what you see is what you download. Arrow keys flip pages, Delete removes or restores this one.</div>
+</aside>
+
+<div class="tip" id="tip"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-card">
+    <h2 id="modalTitle"></h2>
+    <p id="modalBody"></p>
+    <div class="row"><button class="btn" id="modalNo"></button><button class="btn danger" id="modalYes"></button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- Loading the worker as a plain script lets pdf.js run on the main thread, no Worker needed -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script id="staple-core">
+/* =====================================================================
+   StapleCore: pure, DOM-free logic. The test suite loads this exact
+   block out of staple.html, so what is tested is what ships.
+   ===================================================================== */
+(function (root) {
+  "use strict";
+  const COPIES_RE = /_(\d+)_cop(?:y|ies)$/i;
+  const MAX_COPIES = 99;
+  const stripExt = name => String(name).replace(/\.[^./\\]+$/, "");
+  /* Browsers and Drive rename clashes to "name (1).pdf"; that suffix isn't part of the rule. */
+  const stem = name => stripExt(name).replace(/\s*\(\d+\)$/, "").trim();
+
+  /** "Ticket_3_Copies.pdf" -> 3, "Transcript.pdf" -> 1. */
+  function copiesFromName(name) {
+    const m = stem(name).match(COPIES_RE);
+    if (!m) return 1;
+    const n = parseInt(m[1], 10);
+    return n >= 1 ? Math.min(n, MAX_COPIES) : 1;
+  }
+  const effCopies = f => (f.copies ?? f.autoCopies ?? 1);
+  const clampCopies = n => Math.max(1, Math.min(MAX_COPIES, Math.trunc(Number(n)) || 1));
+
+  /** Display name without extension, copy suffix or underscores. */
+  const shortName = n => stem(n).replace(COPIES_RE, "").replace(/_/g, " ").trim();
+
+  /** Files we accept from pickers, folders and zips. */
+  function isAcceptedName(path) {
+    const parts = String(path).split(/[\\/]/);
+    if (parts.some(p => p === "__MACOSX" || p.startsWith("."))) return false;
+    return /\.(pdf|jpe?g|png)$/i.test(parts[parts.length - 1]);
+  }
+  const isImageName = n => /\.(jpe?g|png)$/i.test(n);
+  const isZipName = n => /\.zip$/i.test(n);
+
+  /** A page of the merged PDF is identified by which copy of the file and which source page. */
+  const pageKey = (copy, srcPage) => `${copy}.${srcPage}`;
+  const isRemoved = (f, copy, srcPage) => Array.isArray(f.removed) && f.removed.includes(pageKey(copy, srcPage));
+  /** Returns a new sorted, de-duplicated removal list with keys added (removed=true) or taken out. */
+  function withRemoved(list, keys, removed) {
+    const set = new Set(list || []);
+    for (const k of keys) removed ? set.add(k) : set.delete(k);
+    return [...set].sort((a, b) => { const [ac, ap] = a.split(".").map(Number), [bc, bp] = b.split(".").map(Number); return ac - bc || ap - bp; });
+  }
+
+  /**
+   * Every page of the pile in order, removed ones included (so they can be shown and restored).
+   * pages[i]: {id, copy, copies, srcPage, removed, out}  out = 0-based index in the downloaded PDF, or -1.
+   * blocks:   one per (file, copy) with plan range start..end, kept source indices `keep`,
+   *           and output range outStart..outEnd (-1 when every page of the block is removed).
+   */
+  function buildPlan(files) {
+    const pages = [], blocks = [];
+    let out = 0;
+    for (const f of files) {
+      if (f.error || !(f.pages > 0)) continue;
+      const n = effCopies(f);
+      for (let c = 1; c <= n; c++) {
+        const start = pages.length, keep = [], outStart = out;
+        for (let p = 1; p <= f.pages; p++) {
+          const removed = isRemoved(f, c, p);
+          pages.push({ id: f.id, copy: c, copies: n, srcPage: p, removed, out: removed ? -1 : out });
+          if (!removed) { keep.push(p - 1); out++; }
+        }
+        blocks.push({ f, copy: c, copies: n, start, end: pages.length - 1, keep, kept: keep.length,
+          outStart: keep.length ? outStart : -1, outEnd: keep.length ? out - 1 : -1 });
+      }
+    }
+    return { pages, blocks, kept: out, removed: pages.length - out };
+  }
+  /** Identifies a plan; a merged PDF is current only if its signature matches. */
+  const planSignature = plan => plan.blocks.map(b => `${b.f.id}:${b.copy}/${b.copies}:${b.f.pages}:${(b.keep || []).join(",")}`).join("|");
+
+  /** Output page range of a block: "Page 4", "Pages 4–6", or "Removed". */
+  function rangeLabel(b) {
+    const s = b.outStart ?? b.start, e = b.outEnd ?? b.end;
+    if (s < 0) return "Removed";
+    return s === e ? `Page ${s + 1}` : `Pages ${s + 1}–${e + 1}`;
+  }
+
+  /** Safe output filename that always ends in .pdf. */
+  function sanitizeFilename(raw, fallback) {
+    let n = String(raw ?? "").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "_").trim();
+    if (!n || /^\.+$/.test(n) || /^\.pdf$/i.test(n)) n = fallback;
+    if (!/\.pdf$/i.test(n)) n += ".pdf";
+    return n;
+  }
+  const defaultFilename = (d = new Date()) => {
+    const pad = x => String(x).padStart(2, "0");
+    return `merged_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.pdf`;
+  };
+
+  /** Immutable reorder helpers. */
+  function moveItem(arr, from, to) {
+    if (from < 0 || from >= arr.length || to < 0 || to >= arr.length || from === to) return arr.slice();
+    const out = arr.slice(); const [x] = out.splice(from, 1); out.splice(to, 0, x); return out;
+  }
+  function moveRelative(arr, srcId, targetId, after) {
+    const from = arr.findIndex(f => f.id === srcId);
+    if (from < 0 || srcId === targetId || !arr.some(f => f.id === targetId)) return arr.slice();
+    const out = arr.slice(); const [x] = out.splice(from, 1);
+    out.splice(out.findIndex(f => f.id === targetId) + (after ? 1 : 0), 0, x);
+    return out;
+  }
+  const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+  const sortByName = arr => arr.slice().sort((a, b) => collator.compare(a.name, b.name));
+  const isDuplicate = (files, name, size) => files.some(f => f.name === name && f.size === size);
+
+  /** One image -> one A4 page, centred and fitted inside a 24pt margin. */
+  async function imageToPdf(PDFDocument, buf, isPng) {
+    const doc = await PDFDocument.create();
+    const img = isPng ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+    const W = 595.28, H = 841.89, M = 24;
+    const s = Math.min((W - 2 * M) / img.width, (H - 2 * M) / img.height);
+    const w = img.width * s, h = img.height * s;
+    doc.addPage([W, H]).drawImage(img, { x: (W - w) / 2, y: (H - h) / 2, width: w, height: h });
+    return (await doc.save()).buffer;
+  }
+
+  /** Merge plan blocks. getSrc(file) -> pdf-lib PDFDocument. Returns Uint8Array, or null if cancelled. */
+  async function mergeBlocks(PDFDocument, blocks, getSrc, opts = {}) {
+    const out = await PDFDocument.create();
+    for (const b of blocks) {
+      if (b.keep && !b.keep.length) continue;          // whole block in the trash
+      const src = await getSrc(b.f);
+      const copied = await out.copyPages(src, b.keep || src.getPageIndices());
+      copied.forEach(p => out.addPage(p));
+      if (opts.isCancelled && opts.isCancelled()) return null;
+    }
+    if (opts.title) out.setTitle(opts.title);
+    out.setProducer("Staple");
+    return out.save();
+  }
+
+  root.StapleCore = Object.freeze({
+    COPIES_RE, MAX_COPIES, copiesFromName, effCopies, clampCopies, shortName,
+    isAcceptedName, isImageName, isZipName, pageKey, isRemoved, withRemoved, buildPlan, planSignature, rangeLabel,
+    sanitizeFilename, defaultFilename, moveItem, moveRelative, sortByName, isDuplicate,
+    imageToPdf, mergeBlocks,
+  });
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   Staple: merge PDFs, repeating any file named *_N_copies N times.
+   Everything lives in this browser (IndexedDB + localStorage).
+   AI hook: see `AI` near the bottom; plug features in there later.
+   ===================================================================== */
+const { PDFDocument } = PDFLib;
+const { copiesFromName, effCopies, clampCopies, shortName, isAcceptedName, isImageName, isZipName,
+  buildPlan, planSignature, rangeLabel, sanitizeFilename, defaultFilename, moveItem, moveRelative,
+  sortByName, isDuplicate, imageToPdf, mergeBlocks, withRemoved } = StapleCore;
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const PALETTE = ["#E0352B","#2B6FEB","#D98A00","#178F55","#8B3FD9","#D9437F","#0B93A6","#B5480C","#4F46E5","#5E8F0A","#9C2F6B","#0F766E"];
+const $ = s => document.querySelector(s);
+const el = (tag, props = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "style") n.style.cssText = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (k === "dataset") Object.assign(n.dataset, v);
+    else if (v !== false && v != null) n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat()) if (k != null) n.append(k.nodeType ? k : document.createTextNode(k));
+  return n;
+};
+
+/* ---------------- state ---------------- */
+const state = {
+  files: [],          // {id,name,size,pages,autoCopies,copies,color,locked,error,order}
+  bytes: new Map(),   // id -> ArrayBuffer (source PDF bytes)
+  focusFile: null,
+  picked: new Set(),  // selected pages, as "fileId|copy.srcPage"
+  selected: null,     // output page index (0-based)
+  merged: null,       // {bytes:Uint8Array, doc: pdfjs doc, pages:number}
+  building: false,
+};
+const thumbCache = new Map();   // "id:page" -> objectURL
+const pdfjsDocs = new Map();    // id -> pdfjs doc promise
+const libDocs = new Map();      // id -> pdf-lib PDFDocument promise (flattened if locked)
+
+/* ---------------- IndexedDB ---------------- */
+const DB_NAME = "staple-db";
+let dbp = null;
+function db() {
+  if (!dbp) dbp = new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore("meta", { keyPath: "id" }); r.result.createObjectStore("blobs"); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbp;
+}
+async function idb(store, mode, fn) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const tx = d.transaction(store, mode);
+    const out = fn(tx.objectStore(store));
+    tx.oncomplete = () => res(out && "result" in out ? out.result : undefined);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+const saveMeta = f => idb("meta", "readwrite", s => s.put(stripMeta(f))).catch(() => {});
+const stripMeta = ({ id, name, size, pages, autoCopies, copies, color, locked, error, order, removed }) => ({ id, name, size, pages, autoCopies, copies, color, locked, error, order, removed: removed || [] });
+async function saveAllMeta() {
+  state.files.forEach((f, i) => f.order = i);
+  try { await idb("meta", "readwrite", s => state.files.forEach(f => s.put(stripMeta(f)))); } catch {}
+}
+
+/* ---------------- ingest ---------------- */
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+async function ingest(fileList) {
+  const incoming = [];
+  for (const f of fileList) {
+    if (isZipName(f.name)) {
+      try {
+        const zip = await JSZip.loadAsync(f);
+        for (const entry of Object.values(zip.files)) {
+          if (entry.dir || !isAcceptedName(entry.name)) continue;
+          incoming.push({ name: entry.name.split("/").pop(), data: await entry.async("arraybuffer") });
+        }
+      } catch { toast(`${f.name} isn’t a zip I can open.`, true); }
+    } else if (isAcceptedName(f.webkitRelativePath || f.name)) {
+      incoming.push({ name: f.name, data: await f.arrayBuffer() });
+    }
+  }
+  if (!incoming.length) { toast("No PDFs or images in there. Try again with actual paperwork.", true); return; }
+  setStatus("busy", `Reading ${incoming.length} file${incoming.length > 1 ? "s" : ""}…`);
+  let added = 0, dupes = 0;
+  for (const it of incoming) {
+    if (isDuplicate(state.files, it.name, it.data.byteLength)) { dupes++; continue; }
+    let bytes = it.data;
+    if (isImageName(it.name)) {
+      try { bytes = await imageToPdf(PDFDocument, it.data, /\.png$/i.test(it.name)); }
+      catch { toast(`Couldn’t read the image ${it.name}.`, true); continue; }
+    }
+    const f = {
+      id: uid(), name: it.name, size: it.data.byteLength, pages: 0,
+      autoCopies: copiesFromName(it.name), copies: null,
+      color: PALETTE[(state.files.length) % PALETTE.length],
+      locked: false, error: null, order: state.files.length,
+    };
+    await probe(f, bytes);
+    state.bytes.set(f.id, bytes);
+    state.files.push(f);
+    try {
+      await idb("blobs", "readwrite", s => s.put(bytes, f.id));
+      await saveMeta(f);
+    } catch { toast("Browser storage is full, so this file lives only until you close the tab.", true); }
+    added++;
+  }
+  if (dupes) toast(`Skipped ${dupes} duplicate${dupes > 1 ? "s" : ""}. I saw what you did.`);
+  if (added) toast(`Added ${added} file${added > 1 ? "s" : ""} to the pile.`);
+  changed();
+}
+
+/* Count pages and detect encryption. */
+async function probe(f, bytes) {
+  try {
+    await PDFDocument.load(bytes.slice(0));
+  } catch (e) {
+    if (/encrypt/i.test(String(e && e.message))) f.locked = true;
+    else { /* pdf-lib choked; pdf.js might still cope */ }
+  }
+  try {
+    const d = await pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise;
+    f.pages = d.numPages;
+    d.destroy();
+  } catch (e) {
+    f.error = e && e.name === "PasswordException" ? "Needs a password, so it’s sitting this one out." : "Corrupt or not really a PDF. Skipped.";
+    f.pages = 0;
+  }
+}
+
+/* ---------------- pdf.js helpers ---------------- */
+function srcDoc(id) {
+  if (!pdfjsDocs.has(id)) pdfjsDocs.set(id, pdfjsLib.getDocument({ data: new Uint8Array(state.bytes.get(id).slice(0)) }).promise);
+  return pdfjsDocs.get(id);
+}
+async function renderToCanvas(page, width) {
+  const vp1 = page.getViewport({ scale: 1 });
+  const scale = width / vp1.width;
+  const vp = page.getViewport({ scale });
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  return c;
+}
+
+/* Thumbnails: render each source page once; copies reuse it. Lazy + throttled. */
+const thumbQueue = []; let thumbBusy = 0;
+function wantThumb(id, p, img) {
+  const key = id + ":" + p;
+  if (thumbCache.has(key)) { img.src = thumbCache.get(key); return; }
+  thumbQueue.push({ id, p, key, img });
+  pumpThumbs();
+}
+async function pumpThumbs() {
+  while (thumbBusy < 2 && thumbQueue.length) {
+    const job = thumbQueue.shift();
+    if (thumbCache.has(job.key)) { job.img.src = thumbCache.get(job.key); continue; }
+    if (!state.bytes.has(job.id)) continue;
+    thumbBusy++;
+    (async () => {
+      try {
+        const d = await srcDoc(job.id);
+        const page = await d.getPage(job.p);
+        const c = await renderToCanvas(page, 220 * Math.min(2, window.devicePixelRatio || 1));
+        const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .82));
+        const url = URL.createObjectURL(blob);
+        thumbCache.set(job.key, url);
+        document.querySelectorAll(`img[data-key="${job.key}"]`).forEach(i => i.src = url);
+      } catch {}
+      thumbBusy--; pumpThumbs();
+    })();
+  }
+}
+const io = new IntersectionObserver(entries => {
+  for (const e of entries) if (e.isIntersecting) {
+    const img = e.target; io.unobserve(img);
+    wantThumb(img.dataset.id, +img.dataset.p, img);
+  }
+}, { rootMargin: "400px" });
+
+/* ---------------- merge ---------------- */
+const plan = () => buildPlan(state.files);
+
+async function libDoc(f) {
+  if (!libDocs.has(f.id)) libDocs.set(f.id, (async () => {
+    if (!f.locked) return PDFDocument.load(state.bytes.get(f.id).slice(0));
+    // Locked PDFs can't be copied page-for-page, so flatten each page to an image.
+    const d = await srcDoc(f.id);
+    const out = await PDFDocument.create();
+    for (let p = 1; p <= d.numPages; p++) {
+      const page = await d.getPage(p);
+      const vp = page.getViewport({ scale: 1 });
+      const c = await renderToCanvas(page, vp.width * 2.2);
+      const jpg = await new Promise(r => c.toBlob(r, "image/jpeg", .92));
+      const img = await out.embedJpg(await jpg.arrayBuffer());
+      out.addPage([vp.width, vp.height]).drawImage(img, { x: 0, y: 0, width: vp.width, height: vp.height });
+    }
+    return out;
+  })());
+  return libDocs.get(f.id);
+}
+
+let buildToken = 0, buildPromise = Promise.resolve(), buildTimer = null;
+function scheduleBuild() {
+  clearTimeout(buildTimer);
+  if (plan().kept) setStatus("busy", "Stapling…");
+  buildTimer = setTimeout(() => { buildPromise = build(); }, 300);
+}
+async function build() {
+  const token = ++buildToken;
+  const { pages, blocks, kept } = plan();
+  if (!kept) {
+    state.building = false; dropMerged();
+    setStatus("", pages.length ? "Every page is in the trash" : state.files.length ? "Nothing usable in the pile" : "Waiting for paperwork");
+    updateDl(); return;
+  }
+  state.building = true; updateDl();
+  setStatus("busy", `Stapling ${kept} pages…`);
+  const sig = planSignature({ blocks });
+  try {
+    const bytes = await mergeBlocks(PDFDocument, blocks, libDoc, {
+      title: currentFilename().replace(/\.pdf$/i, ""), isCancelled: () => token !== buildToken });
+    if (!bytes || token !== buildToken) return;
+    const doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+    if (token !== buildToken) { doc.destroy(); return; }
+    dropMerged();
+    state.merged = { bytes, doc, pages: doc.numPages, sig };
+    setStatus("ready", `Ready · ${doc.numPages} pages · ${fmtSize(bytes.byteLength)}`);
+    if (inspectorOpen()) renderInspector();
+  } catch (e) {
+    console.error(e);
+    if (token === buildToken) setStatus("err", "Stapling failed. One of those files is being difficult.");
+  } finally {
+    if (token === buildToken) { state.building = false; updateDl(); }
+  }
+}
+function dropMerged() { if (state.merged) { state.merged.doc.destroy(); state.merged = null; } }
+
+/* ---------------- render: queue ---------------- */
+let dragId = null;
+function renderQueue() {
+  const list = $("#fileList");
+  list.replaceChildren();
+  const n = state.files.length;
+  $("#qcount").textContent = n ? `${n} file${n > 1 ? "s" : ""}, top to bottom = merge order` : "empty";
+  $("#sortBtn").disabled = n < 2;
+  $("#resetBtn").disabled = !state.files.some(f => f.copies != null);
+  $("#clearFilesBtn").disabled = !n;
+  state.files.forEach((f, i) => {
+    const copies = effCopies(f);
+    const chips = [];
+    if (f.error) chips.push(el("span", { class: "chip warn", title: f.error }, "skipped"));
+    else chips.push(el("span", {}, `${f.pages} page${f.pages !== 1 ? "s" : ""}`));
+    if (f.copies == null && f.autoCopies > 1) chips.push(el("span", { class: "chip auto", title: `The name says ${f.autoCopies} copies, so ${f.autoCopies} it is.` }, `×${f.autoCopies} from name`));
+    if (f.copies != null) chips.push(el("span", { class: "chip", title: "You changed this. Bold." }, "your call"));
+    if (f.locked) chips.push(el("span", { class: "chip", title: "This PDF is locked, so its pages get flattened to images to merge cleanly." }, "🔒 flattened"));
+
+    const li = el("li", {
+      class: "file" + (state.focusFile === f.id ? " focus" : ""),
+      style: `--c:${f.color}`, draggable: "true", dataset: { id: f.id },
+      title: f.error || f.name,
+      ondragstart: e => { dragId = f.id; li.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", f.id); },
+      ondragend: () => { dragId = null; li.classList.remove("dragging"); clearDropMarks(); },
+      ondragover: e => { if (!dragId || dragId === f.id) return; e.preventDefault(); e.stopPropagation(); const after = e.offsetY > li.offsetHeight / 2; clearDropMarks(); li.classList.add(after ? "drop-after" : "drop-before"); },
+      ondrop: e => { if (!dragId) return; e.preventDefault(); e.stopPropagation(); const after = li.classList.contains("drop-after"); clearDropMarks(); moveTo(dragId, f.id, after); },
+      onclick: e => { if (e.target.closest("button")) return; focusFile(f.id); },
+    },
+      el("div", { class: "order" },
+        el("button", { "aria-label": `Move ${f.name} up`, disabled: i === 0, onclick: () => move(i, -1) }, "▲"),
+        el("button", { "aria-label": `Move ${f.name} down`, disabled: i === n - 1, onclick: () => move(i, 1) }, "▼")),
+      el("div", { class: "name" }, el("b", {}, f.name), el("small", {}, chips)),
+      el("div", { class: "right" },
+        f.error ? null : el("div", { class: "stepper", role: "group", "aria-label": `Copies of ${f.name}` },
+          el("button", { "aria-label": "One fewer copy", onclick: () => setCopies(f, copies - 1) }, "−"),
+          el("output", { title: "Copies in the merged PDF" }, `×${copies}`),
+          el("button", { "aria-label": "One more copy", onclick: () => setCopies(f, copies + 1) }, "+")),
+        el("button", { class: "x", "aria-label": `Remove ${f.name}`, title: "Remove", onclick: () => removeFile(f.id) }, "✕"))
+    );
+    list.append(li);
+  });
+}
+function clearDropMarks() { document.querySelectorAll(".drop-before,.drop-after").forEach(n => n.classList.remove("drop-before", "drop-after")); }
+
+/* ---------------- render: preview ---------------- */
+const selKey = pg => `${pg.id}|${pg.copy}.${pg.srcPage}`;
+let lastPick = null;   // plan index of the last checkbox click, for shift-click ranges
+const binIcon = () => { const t = document.createElementNS("http://www.w3.org/2000/svg", "svg"); t.setAttribute("viewBox", "0 0 24 24"); t.setAttribute("width", "16"); t.setAttribute("height", "16"); t.setAttribute("aria-hidden", "true"); t.innerHTML = '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'; return t; };
+const undoIcon = () => { const t = document.createElementNS("http://www.w3.org/2000/svg", "svg"); t.setAttribute("viewBox", "0 0 24 24"); t.setAttribute("width", "16"); t.setAttribute("height", "16"); t.setAttribute("aria-hidden", "true"); t.innerHTML = '<path d="M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'; return t; };
+const checkIcon = () => { const t = document.createElementNS("http://www.w3.org/2000/svg", "svg"); t.setAttribute("viewBox", "0 0 24 24"); t.setAttribute("width", "16"); t.setAttribute("height", "16"); t.setAttribute("aria-hidden", "true"); t.innerHTML = '<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'; return t; };
+
+function pageLabel(pg, f) {
+  return (pg.removed ? "Removed page" : `Page ${pg.out + 1}`) + `: ${f.name}, source page ${pg.srcPage}` + (pg.copies > 1 ? `, copy ${pg.copy} of ${pg.copies}` : "");
+}
+function renderPreview() {
+  const { pages, blocks, kept, removed } = plan();
+  const has = pages.length > 0;
+  // forget selections that no longer point at a page
+  const live = new Set(pages.map(selKey));
+  for (const k of state.picked) if (!live.has(k)) state.picked.delete(k);
+
+  $("#empty").hidden = has;
+  $("#ribbonWrap").hidden = !has;
+  $("#ribbonTotal").textContent = has
+    ? `${kept} page${kept !== 1 ? "s" : ""} from ${new Set(blocks.filter(b => b.kept).map(b => b.f.id)).size} files` + (removed ? `, ${removed} removed` : "")
+    : "";
+
+  const rib = $("#ribbon"); rib.replaceChildren();
+  const holder = $("#blocks"); holder.replaceChildren();
+  rib.classList.toggle("dim", !!state.focusFile);
+  $("#preview").classList.toggle("dim", !!state.focusFile);
+  $("#preview").classList.toggle("picking", state.picked.size > 0);
+
+  blocks.forEach((b, bi) => {
+    const range = rangeLabel(b);
+    const label = `${b.f.name}: ${range}` + (b.copies > 1 ? `, copy ${b.copy} of ${b.copies}` : "") + (b.kept < b.f.pages && b.kept ? `, ${b.f.pages - b.kept} removed` : "");
+    const lit = state.focusFile === b.f.id;
+    const seg = el("button", {
+      class: "seg" + (b.copy > 1 ? " copy-cont" : "") + (lit ? " lit" : "") + (b.kept ? "" : " gone"),
+      style: `--c:${b.f.color};--n:${b.kept}`, "aria-label": label,
+      onclick: () => document.getElementById("blk" + bi)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      onmouseenter: e => showTip(e, label), onmousemove: e => showTip(e, label), onmouseleave: hideTip,
+    }, el("span", {}, b.copy === 1 ? shortName(b.f.name) : `×${b.copy}`));
+    rib.append(seg);
+
+    const grid = el("div", { class: "pages" });
+    for (let i = b.start; i <= b.end; i++) {
+      const pg = pages[i], key = selKey(pg), picked = state.picked.has(key);
+      const img = el("img", { alt: "", loading: "lazy", dataset: { id: pg.id, p: pg.srcPage, key: pg.id + ":" + pg.srcPage } });
+      if (thumbCache.has(img.dataset.key)) img.src = thumbCache.get(img.dataset.key); else io.observe(img);
+      const lab = pageLabel(pg, b.f);
+      grid.append(el("div", {
+        class: "page" + (state.selected === i ? " sel" : "") + (pg.removed ? " removed" : "") + (picked ? " picked" : ""),
+        style: `--c:${b.f.color}`, dataset: { i, key },
+      },
+        el("button", { class: "open", "aria-label": "Open " + lab,
+          onclick: e => (e.metaKey || e.ctrlKey || e.shiftKey) ? pick(i, e.shiftKey) : openInspector(i) },
+          el("div", { class: "thumb" }, img),
+          el("span", { class: "num" }, pg.removed ? "✕" : pg.out + 1),
+          pg.removed ? el("span", { class: "stamp" }, "Removed") : null,
+          el("div", { class: "tag" }, el("span", {}, shortName(b.f.name)), el("span", {}, b.copies > 1 ? `${b.copy}/${b.copies}` : `p${pg.srcPage}`))),
+        el("button", { class: "pick", "aria-pressed": picked ? "true" : "false", "aria-label": "Select " + lab, title: "Select (Shift-click for a range)",
+          onclick: e => pick(i, e.shiftKey) }, picked ? checkIcon() : null),
+        el("button", { class: "bin", "aria-label": (pg.removed ? "Restore " : "Remove ") + lab, title: pg.removed ? "Put this page back" : "Remove this page",
+          onclick: () => setRemoved([key], !pg.removed) }, pg.removed ? undoIcon() : binIcon())
+      ));
+    }
+    const blockKeys = pages.slice(b.start, b.end + 1).map(selKey);
+    const allPicked = blockKeys.every(k => state.picked.has(k));
+    holder.append(el("section", { class: "block" + (lit ? " lit" : "") + (b.kept ? "" : " gone"), id: "blk" + bi, style: `--c:${b.f.color}` },
+      el("div", { class: "block-head" },
+        el("span", { class: "range" }, range),
+        el("h3", {}, b.f.name),
+        el("span", { class: "meta" }, [
+          `${b.f.pages} page${b.f.pages > 1 ? "s" : ""} in source`,
+          b.copies > 1 ? `copy ${b.copy} of ${b.copies}` : null,
+          b.kept < b.f.pages ? `${b.f.pages - b.kept} removed` : null,
+          b.f.locked ? "flattened" : null].filter(Boolean).join(", ")),
+        el("button", { class: "btn small", "aria-label": `${allPicked ? "Unselect" : "Select"} pages of ${b.f.name}` + (b.copies > 1 ? ` copy ${b.copy}` : ""),
+          onclick: () => { blockKeys.forEach(k => allPicked ? state.picked.delete(k) : state.picked.add(k)); renderPreview(); } },
+          allPicked ? "Unselect" : "Select these")),
+      grid));
+  });
+  renderPagebar(pages);
+}
+
+function renderPagebar(pages = plan().pages) {
+  const picked = pages.filter(pg => state.picked.has(selKey(pg)));
+  const n = picked.length, removedTotal = pages.filter(p => p.removed).length;
+  $("#pickCount").textContent = n ? `${n} page${n > 1 ? "s" : ""} selected` : "No pages selected";
+  $("#selectAllBtn").disabled = !pages.length || n === pages.length;
+  $("#selectNoneBtn").disabled = !n;
+  $("#removeSelBtn").disabled = !picked.some(p => !p.removed);
+  $("#restoreSelBtn").disabled = !picked.some(p => p.removed);
+  $("#restoreAllBtn").disabled = !removedTotal;
+  $("#restoreAllBtn").textContent = removedTotal ? `Restore all removed (${removedTotal})` : "Restore all removed";
+}
+
+function pick(i, range) {
+  const pages = plan().pages;
+  const key = selKey(pages[i]);
+  if (range && lastPick != null && lastPick < pages.length) {
+    const on = !state.picked.has(key) || state.picked.has(selKey(pages[lastPick]));
+    const [a, b] = [Math.min(lastPick, i), Math.max(lastPick, i)];
+    for (let j = a; j <= b; j++) on ? state.picked.add(selKey(pages[j])) : state.picked.delete(selKey(pages[j]));
+  } else {
+    state.picked.has(key) ? state.picked.delete(key) : state.picked.add(key);
+  }
+  lastPick = i;
+  renderPreview();
+}
+
+/** Remove (on=true) or restore pages by selection key. Offers Undo. */
+function setRemoved(keys, on, { quiet = false } = {}) {
+  const byFile = new Map();
+  for (const k of keys) { const [id, pk] = k.split("|"); if (!byFile.has(id)) byFile.set(id, []); byFile.get(id).push(pk); }
+  const before = new Map();
+  let changedCount = 0;
+  for (const [id, pks] of byFile) {
+    const f = state.files.find(x => x.id === id); if (!f) continue;
+    before.set(id, f.removed || []);
+    const next = withRemoved(f.removed, pks, on);
+    changedCount += Math.abs(next.length - (f.removed || []).length);
+    f.removed = next; saveMeta(f);
+  }
+  if (!changedCount) return;
+  changed();
+  if (inspectorOpen()) renderInspector();
+  if (!quiet) toast(`${on ? "Removed" : "Restored"} ${changedCount} page${changedCount > 1 ? "s" : ""}.`, false, {
+    label: "Undo", run: () => {
+      for (const [id, list] of before) { const f = state.files.find(x => x.id === id); if (f) { f.removed = list; saveMeta(f); } }
+      changed(); if (inspectorOpen()) renderInspector(); toast("Undone.");
+    } });
+}
+function removeSelected(on) {
+  const pages = plan().pages.filter(pg => state.picked.has(selKey(pg)) && pg.removed !== on);
+  setRemoved(pages.map(selKey), on);
+  state.picked.clear(); renderPreview();
+}
+function restoreAll() {
+  const keys = plan().pages.filter(p => p.removed).map(selKey);
+  setRemoved(keys, false);
+}
+
+/* ---------------- inspector ---------------- */
+const inspectorOpen = () => $("#inspector").classList.contains("on");
+function openInspector(i) {
+  state.selected = i;
+  $("#inspector").classList.add("on"); $("#inspector").setAttribute("aria-hidden", "false");
+  $("#scrim").classList.add("on");
+  document.querySelectorAll(".page.sel").forEach(n => n.classList.remove("sel"));
+  document.querySelectorAll(".page")[i]?.classList.add("sel");
+  renderInspector();
+  $("#inspClose").focus({ preventScroll: true });
+}
+function closeInspector() {
+  $("#inspector").classList.remove("on"); $("#inspector").setAttribute("aria-hidden", "true");
+  $("#scrim").classList.remove("on");
+}
+let inspToken = 0;
+async function renderInspector() {
+  const { pages, blocks, kept } = plan();
+  if (!pages.length) return closeInspector();
+  const i = Math.min(state.selected ?? 0, pages.length - 1); state.selected = i;
+  const pg = pages[i], f = state.files.find(x => x.id === pg.id);
+  const b = blocks.find(x => i >= x.start && i <= x.end);
+  $("#inspNum").replaceChildren(pg.removed ? "Removed" : String(pg.out + 1), " ", el("small", {}, pg.removed ? "not in the PDF" : `of ${kept}`));
+  const facts = $("#inspFacts"); facts.style.setProperty("--c", f.color);
+  facts.replaceChildren(
+    el("dt", {}, "From"), el("dd", {}, f.name),
+    el("dt", {}, "Source page"), el("dd", {}, `${pg.srcPage} of ${f.pages}`),
+    el("dt", {}, "Copy"), el("dd", {}, pg.copies > 1 ? `${pg.copy} of ${pg.copies}` : "only one"),
+    el("dt", {}, "This block"), el("dd", {}, b.kept ? `${rangeLabel(b).toLowerCase()} of the merged PDF` : "every page removed"));
+  $("#inspPrev").disabled = i === 0; $("#inspNext").disabled = i === pages.length - 1;
+  const tog = $("#inspToggle");
+  tog.textContent = pg.removed ? "Restore page" : "Remove page";
+  tog.classList.toggle("ghost-danger", !pg.removed);
+  tog.onclick = () => setRemoved([selKey(pg)], !pg.removed);
+
+  const t = ++inspToken;
+  const wrap = $("#canvasWrap");
+  wrap.classList.toggle("removed", pg.removed);
+  try {
+    await buildPromise;
+    let page;
+    const fresh = state.merged && state.merged.sig === planSignature(plan());
+    if (!pg.removed && fresh) page = await state.merged.doc.getPage(pg.out + 1);
+    else page = await (await srcDoc(pg.id)).getPage(pg.srcPage);   // removed page, or merged PDF still rebuilding
+    const c = await renderToCanvas(page, Math.max(300, wrap.clientWidth - 24) * Math.min(2, window.devicePixelRatio || 1));
+    if (t !== inspToken) return;
+    c.id = "inspCanvas"; c.style.width = (wrap.clientWidth - 24) + "px";
+    wrap.replaceChildren(c);
+  } catch (e) { console.error(e); }
+}
+function step(d) {
+  const total = plan().pages.length; if (!total) return;
+  openInspector(Math.max(0, Math.min(total - 1, (state.selected ?? 0) + d)));
+  document.querySelectorAll(".page")[state.selected]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+/* ---------------- actions ---------------- */
+function changed() { renderQueue(); renderPreview(); scheduleBuild(); updateStorage(); updateDl(); }
+function setCopies(f, n) {
+  n = clampCopies(n);
+  f.copies = n === f.autoCopies ? null : n;
+  saveMeta(f); changed();
+}
+function move(i, d) {
+  const j = i + d; if (j < 0 || j >= state.files.length) return;
+  state.files = moveItem(state.files, i, j);
+  saveAllMeta(); changed();
+}
+function moveTo(srcId, targetId, after) {
+  state.files = moveRelative(state.files, srcId, targetId, after);
+  saveAllMeta(); changed();
+}
+function focusFile(id) {
+  state.focusFile = state.focusFile === id ? null : id;
+  renderQueue(); renderPreview();
+  if (state.focusFile) {
+    const bi = plan().blocks.findIndex(b => b.f.id === id);
+    if (bi >= 0) document.getElementById("blk" + bi)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+async function removeFile(id) {
+  const f = state.files.find(x => x.id === id);
+  state.files = state.files.filter(x => x.id !== id);
+  forget(id);
+  if (state.focusFile === id) state.focusFile = null;
+  try { await idb("meta", "readwrite", s => s.delete(id)); await idb("blobs", "readwrite", s => s.delete(id)); } catch {}
+  toast(`Removed ${f ? f.name : "file"}.`);
+  saveAllMeta(); changed();
+}
+function forget(id) {
+  state.bytes.delete(id);
+  pdfjsDocs.get(id)?.then(d => d.destroy()).catch(() => {}); pdfjsDocs.delete(id);
+  libDocs.delete(id);
+  for (const [k, url] of thumbCache) if (k.startsWith(id + ":")) { URL.revokeObjectURL(url); thumbCache.delete(k); }
+}
+function resetMemory() {
+  [...state.bytes.keys()].forEach(forget);
+  state.files = []; state.focusFile = null; state.selected = null; state.picked.clear();
+  dropMerged(); closeInspector();
+}
+async function clearFiles() {
+  if (!state.files.length) return toast("The pile is already empty. Very zen.");
+  if (!await confirmBox("Clear the pile?", `All ${state.files.length} files leave this app and this browser’s storage. Your originals on disk or Drive are untouched.`, "Clear files", "Keep them")) return;
+  resetMemory();
+  try { await idb("meta", "readwrite", s => s.clear()); await idb("blobs", "readwrite", s => s.clear()); } catch {}
+  toast("Pile cleared. Fresh start.");
+  changed();
+}
+async function clearStorage() {
+  if (!await confirmBox("Wipe browser storage?", "This deletes every file, order, copy count and setting this app saved in your browser. Your originals are untouched.", "Wipe it", "Cancel")) return;
+  resetMemory();
+  try { if (dbp) (await dbp).close(); } catch {}
+  dbp = null;
+  await new Promise(r => { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = () => r(); });
+  try { localStorage.clear(); sessionStorage.clear(); } catch {}
+  applyTheme(null);
+  $("#fname").value = defaultFilename();
+  toast("Storage wiped. I don’t remember a thing.");
+  changed();
+}
+function sortAZ() {
+  state.files = sortByName(state.files);
+  saveAllMeta(); changed(); toast("Sorted A–Z.");
+}
+function resetCopies() { state.files.forEach(f => f.copies = null); saveAllMeta(); changed(); toast("Copy counts follow the file names again."); }
+
+/* ---------------- download ---------------- */
+const currentFilename = () => sanitizeFilename($("#fname").value, defaultFilename());
+const downloadsCap = (window.claude && typeof window.claude.use === "function") ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+async function download() {
+  clearTimeout(buildTimer);
+  if (!state.merged || state.building || state.merged.sig !== planSignature(plan())) { buildPromise = build(); await buildPromise; }
+  if (!state.merged) return toast(plan().pages.length ? "Every page is in the trash. Restore some first." : "Nothing to download yet.", true);
+  const name = currentFilename();
+  const blob = new Blob([state.merged.bytes], { type: "application/pdf" });
+  const dl = await downloadsCap;
+  if (dl) {
+    try { await dl.save({ filename: name, data: blob }); toast(`Saved ${name}. Embassy, brace yourself.`); }
+    catch (e) {
+      if (e && e.code === "declined") toast("Download cancelled. No hard feelings.");
+      else if (e && e.code === "rate_limited") toast("A save prompt is already open.", true);
+      else toast(`Couldn’t save the file (${e && e.code || "unknown error"}).`, true);
+    }
+    return;
+  }
+  const a = el("a", { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(`Saved ${name}.`);
+}
+
+/* ---------------- ui bits ---------------- */
+function setStatus(kind, text) { const s = $("#status"); s.className = "status " + kind; $("#statusText").textContent = text; }
+function updateDl() { $("#dlBtn").disabled = !plan().kept; }
+function toast(msg, bad, action) {
+  const t = el("div", { class: "toast" + (bad ? " bad" : "") }, el("span", {}, msg));
+  if (action) t.append(el("button", { onclick: () => { t.remove(); action.run(); } }, action.label));
+  $("#toasts").append(t);
+  setTimeout(() => t.remove(), action ? 6000 : 3200);
+}
+function showTip(e, text) { const t = $("#tip"); t.textContent = text; t.classList.add("on"); t.style.left = Math.min(innerWidth - 290, e.clientX + 12) + "px"; t.style.top = (e.clientY + 16) + "px"; }
+function hideTip() { $("#tip").classList.remove("on"); }
+const fmtSize = b => b < 1024 * 1024 ? (b / 1024).toFixed(0) + " KB" : (b / 1048576).toFixed(1) + " MB";
+async function updateStorage() {
+  const used = state.files.reduce((s, f) => s + f.size, 0);
+  let txt = state.files.length ? `${fmtSize(used)} of files kept in this browser only.` : "Stored only in this browser. Nothing leaves your machine.";
+  let pct = 0;
+  try { const est = await navigator.storage.estimate(); if (est.quota) { pct = Math.min(100, (est.usage / est.quota) * 100); txt += ` ${pct < 1 ? "<1" : pct.toFixed(0)}% of the space this site may use.`; } } catch {}
+  $("#storageText").textContent = txt; $("#meter").style.width = Math.max(pct, state.files.length ? 2 : 0) + "%";
+}
+function confirmBox(title, body, yes, no) {
+  return new Promise(res => {
+    $("#modalTitle").textContent = title; $("#modalBody").textContent = body;
+    $("#modalYes").textContent = yes; $("#modalNo").textContent = no;
+    $("#modal").classList.add("on"); $("#modalNo").focus();
+    const done = v => { $("#modal").classList.remove("on"); $("#modalYes").onclick = $("#modalNo").onclick = null; res(v); };
+    $("#modalYes").onclick = () => done(true); $("#modalNo").onclick = () => done(false);
+    $("#modal").onkeydown = e => { if (e.key === "Escape") done(false); };
+  });
+}
+
+/* theme: system by default, override saved in localStorage */
+function applyTheme(t) {
+  if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  try { t ? localStorage.setItem("staple-theme", t) : localStorage.removeItem("staple-theme"); } catch {}
+  $("#themeBtn").title = t ? `Stuck on ${t}. Click to switch.` : "Following your system. Click to switch.";
+}
+function toggleTheme() {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  applyTheme(cur === "dark" ? "light" : "dark");
+}
+
+/* ---------------- wiring ---------------- */
+$("#pickFiles").onclick = () => $("#fileInput").click();
+$("#pickFolder").onclick = () => $("#folderInput").click();
+$("#fileInput").onchange = e => { ingest([...e.target.files]); e.target.value = ""; };
+$("#folderInput").onchange = e => { ingest([...e.target.files]); e.target.value = ""; };
+const drop = $("#drop");
+["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => {
+  if (dragId || !e.dataTransfer || ![...e.dataTransfer.types].includes("Files")) return;
+  e.preventDefault(); drop.classList.add("over");
+}));
+document.addEventListener("dragleave", e => { if (!e.relatedTarget) drop.classList.remove("over"); });
+document.addEventListener("drop", async e => {
+  if (dragId || !e.dataTransfer || ![...e.dataTransfer.types].includes("Files")) return;
+  e.preventDefault(); drop.classList.remove("over");
+  const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (items.some(i => i.isDirectory)) ingest(await walkEntries(items));
+  else ingest([...e.dataTransfer.files]);
+});
+async function walkEntries(entries) {
+  const out = [];
+  const walk = async en => {
+    if (en.isFile) out.push(await new Promise((r, j) => en.file(r, j)));
+    else if (en.isDirectory) {
+      const reader = en.createReader();
+      let batch;
+      do { batch = await new Promise((r, j) => reader.readEntries(r, j)); for (const c of batch) await walk(c); } while (batch.length);
+    }
+  };
+  for (const en of entries) await walk(en);
+  return out;
+}
+
+$("#dlBtn").onclick = download;
+$("#fname").value = (() => { try { return localStorage.getItem("staple-fname"); } catch { return null; } })() || defaultFilename();
+$("#fname").addEventListener("input", () => { try { localStorage.setItem("staple-fname", $("#fname").value); } catch {} });
+$("#fname").addEventListener("change", scheduleBuild);
+
+$("#sortBtn").onclick = sortAZ;
+$("#resetBtn").onclick = resetCopies;
+$("#themeBtn").onclick = toggleTheme;
+$("#clearFilesBtn").onclick = clearFiles;
+$("#clearStorageBtn").onclick = clearStorage;
+
+new ResizeObserver(() => document.documentElement.style.setProperty("--top-h", $(".top").offsetHeight + "px")).observe($(".top"));
+$("#scrim").onclick = closeInspector;
+$("#inspClose").onclick = closeInspector;
+$("#inspPrev").onclick = () => step(-1);
+$("#inspNext").onclick = () => step(1);
+$("#selectAllBtn").onclick = () => { plan().pages.forEach(pg => state.picked.add(selKey(pg))); renderPreview(); };
+$("#selectNoneBtn").onclick = () => { state.picked.clear(); renderPreview(); };
+$("#removeSelBtn").onclick = () => removeSelected(true);
+$("#restoreSelBtn").onclick = () => removeSelected(false);
+$("#restoreAllBtn").onclick = restoreAll;
+document.addEventListener("keydown", e => {
+  if ($("#modal").classList.contains("on")) return;
+  if (e.key === "Escape") { if (inspectorOpen()) closeInspector(); else if (state.picked.size) { state.picked.clear(); renderPreview(); } else if (state.focusFile) focusFile(state.focusFile); }
+  if ((e.key === "Delete" || e.key === "Backspace") && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+    if (inspectorOpen()) { e.preventDefault(); $("#inspToggle").click(); return; }
+    if (state.picked.size) { e.preventDefault(); removeSelected(true); return; }
+  }
+  if (!inspectorOpen() || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); step(1); }
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); step(-1); }
+});
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => inspectorOpen() && renderInspector(), 200); });
+
+/* ---------------- AI hook (future) ----------------
+   Ideas that slot in here: auto-sort by person/doc type, detect expired
+   passports, flag missing docs per applicant, generate a cover-page index.
+   Inside a published Claude artifact, use `await claude.use("sample")`.     */
+const AI = {
+  context: () => ({ files: state.files.map(f => ({ name: f.name, pages: f.pages, copies: effCopies(f) })), plan: plan().blocks.filter(b => b.kept).map(b => ({ file: b.f.name, copy: b.copy, from: b.outStart + 1, to: b.outEnd + 1, keptSourcePages: b.keep.map(i => i + 1) })) }),
+};
+/* Test/automation hook: resolves once the merged PDF matches the current pile. */
+async function idle() {
+  for (let i = 0; i < 400; i++) {
+    await buildPromise;
+    const p = plan();
+    if (!p.kept) return null;
+    if (!state.building && state.merged && state.merged.sig === planSignature(p)) return state.merged.pages;
+    await new Promise(r => setTimeout(r, 50));
+  }
+  throw new Error("build never settled");
+}
+window.Staple = { state, plan, AI, idle };
+
+/* ---------------- boot: restore from IndexedDB ---------------- */
+(async function boot() {
+  try { const t = localStorage.getItem("staple-theme"); if (t) applyTheme(t); } catch {}
+  try {
+    const metas = await idb("meta", "readonly", s => s.getAll());
+    if (metas && metas.length) {
+      setStatus("busy", "Restoring your pile…");
+      metas.sort((a, b) => a.order - b.order);
+      for (const m of metas) {
+        const bytes = await idb("blobs", "readonly", s => s.get(m.id));
+        if (!bytes) continue;
+        state.bytes.set(m.id, bytes); state.files.push(m);
+      }
+      if (state.files.length) toast(`Welcome back. Restored ${state.files.length} file${state.files.length > 1 ? "s" : ""}.`);
+    }
+  } catch { toast("Browser storage is off here, so files last only until you close the tab.", true); }
+  changed();
+})();
+</script>
+</body>
+</html>
