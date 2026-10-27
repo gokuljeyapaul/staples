@@ -31,4 +31,7 @@ img = Image.new("RGB", (600, 400), (43, 47, 217))
 ImageDraw.Draw(img).rectangle([40, 40, 560, 360], outline=(255, 225, 77), width=12)
 img.save(out / "Passport_Scan.png")
 img.rotate(90, expand=True).save(out / "Visa_Scan.jpg", quality=85)   # portrait 400x600
+# Formats the browser decodes natively; the app re-encodes them onto an A4 page.
+for fmt in ("webp", "gif", "bmp"):
+    img.save(out / f"Scan_{fmt.title()}.{fmt}")
 print("fixtures written to", out)

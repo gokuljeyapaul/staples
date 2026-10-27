@@ -12,7 +12,9 @@ export default async function globalSetup() {
   for (const [name, pages] of DRIVE_SET) await writeFile(GEN + name, await makePdf(name, pages));
   await writeFile(GEN + "Extra_Doc.pdf", await makePdf("Extra_Doc.pdf", 1));
   await writeFile(GEN + "Broken.pdf", "this is not a pdf at all");
-  for (const f of ["Locked_Owner_Only.pdf", "Password_Required.pdf", "Passport_Scan.png", "Visa_Scan.jpg"]) await copyFile(FIX + f, GEN + f);
+  await writeFile(GEN + "Notes.docx", "rejection is by extension, so this can be fake");
+  for (const f of ["Locked_Owner_Only.pdf", "Password_Required.pdf", "Passport_Scan.png", "Visa_Scan.jpg",
+    "Scan_Webp.webp", "Scan_Gif.gif", "Scan_Bmp.bmp"]) await copyFile(FIX + f, GEN + f);
 
   // What Google Drive hands you for "Download folder": nested folder + OS junk.
   const zip = new JSZip();

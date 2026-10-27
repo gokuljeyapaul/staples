@@ -116,6 +116,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .x{width:28px;height:28px;border:0;background:none;color:var(--ink-soft);border-radius:8px;font-size:16px}
 .x:hover{background:#FFE4E1;color:var(--danger)}
 .storage{margin-top:auto;font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px}
+.privacy-link{color:var(--ink-soft);text-decoration:underline;text-decoration-color:var(--stamp);text-underline-offset:3px}
+.privacy-link:hover{color:var(--stamp)}
 .meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
 .meter i{display:block;height:100%;background:var(--stamp);width:0;transition:width .4s}
 
@@ -266,6 +268,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       </div>
       <div id="storageText">Stored only in this browser.</div>
       <div class="meter"><i id="meter"></i></div>
+      <a class="privacy-link" href="privacy.html">Privacy &amp; limits — how much this can handle</a>
     </div>
   </aside>
 
@@ -355,9 +358,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   function isAcceptedName(path) {
     const parts = String(path).split(/[\\/]/);
     if (parts.some(p => p === "__MACOSX" || p.startsWith("."))) return false;
-    return /\.(pdf|jpe?g|png)$/i.test(parts[parts.length - 1]);
+    return /\.(pdf|jpe?g|png|webp|gif|bmp|avif)$/i.test(parts[parts.length - 1]);
   }
-  const isImageName = n => /\.(jpe?g|png)$/i.test(n);
+  const isImageName = n => /\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(n);
   const isZipName = n => /\.zip$/i.test(n);
 
   /** A page of the merged PDF is identified by which copy of the file and which source page. */
@@ -539,8 +542,25 @@ async function saveAllMeta() {
 /* ---------------- ingest ---------------- */
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+/* Any image -> one A4 PDF. JPG/PNG embed raw bytes; WebP/GIF/BMP/AVIF are decoded
+   by the browser, painted on white (JPEG has no transparency) and re-encoded. */
+async function toImagePdf(buf, name) {
+  if (/\.png$/i.test(name)) return imageToPdf(PDFDocument, buf, true);
+  if (/\.jpe?g$/i.test(name)) return imageToPdf(PDFDocument, buf, false);
+  const bitmap = await createImageBitmap(new Blob([buf]));
+  const c = document.createElement("canvas");
+  c.width = bitmap.width; c.height = bitmap.height;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bitmap, 0, 0);
+  bitmap.close && bitmap.close();
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .92));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return imageToPdf(PDFDocument, bytes, bytes[0] === 0x89 && bytes[1] === 0x50);
+}
+
 async function ingest(fileList) {
-  const incoming = [];
+  const incoming = [], rejected = [];
   for (const f of fileList) {
     if (isZipName(f.name)) {
       try {
@@ -552,16 +572,20 @@ async function ingest(fileList) {
       } catch { toast(`${f.name} isn’t a zip I can open.`, true); }
     } else if (isAcceptedName(f.webkitRelativePath || f.name)) {
       incoming.push({ name: f.name, data: await f.arrayBuffer() });
-    }
+    } else rejected.push(f.name);
   }
-  if (!incoming.length) { toast("No PDFs or images in there. Try again with actual paperwork.", true); return; }
+  if (rejected.length) {
+    const exts = [...new Set(rejected.map(n => (n.match(/\.[^.]+$/) || ["with no extension"])[0].toLowerCase()))].join(", ");
+    toast(`Skipped ${rejected.length} file${rejected.length > 1 ? "s" : ""} — ${exts} can’t be read yet. Export as PDF (or convert to JPG/PNG) and drop that.`, true);
+  }
+  if (!incoming.length) { if (!rejected.length) toast("No PDFs or images in there. Try again with actual paperwork.", true); return; }
   setStatus("busy", `Reading ${incoming.length} file${incoming.length > 1 ? "s" : ""}…`);
   let added = 0, dupes = 0;
   for (const it of incoming) {
     if (isDuplicate(state.files, it.name, it.data.byteLength)) { dupes++; continue; }
     let bytes = it.data;
     if (isImageName(it.name)) {
-      try { bytes = await imageToPdf(PDFDocument, it.data, /\.png$/i.test(it.name)); }
+      try { bytes = await toImagePdf(it.data, it.name); }
       catch { toast(`Couldn’t read the image ${it.name}.`, true); continue; }
     }
     const f = {

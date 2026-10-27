@@ -69,8 +69,9 @@ describe("shortName", () => {
 describe("file acceptance", () => {
   it.each([
     ["a.pdf", true], ["A.PDF", true], ["scan.jpg", true], ["scan.JPEG", true], ["scan.png", true],
+    ["scan.webp", true], ["scan.WEBP", true], ["photo.gif", true], ["photo.bmp", true], ["photo.avif", true],
     ["Drive Folder/sub/a.pdf", true], ["Drive Folder\\a.pdf", true],
-    ["notes.txt", false], ["a.pdf.zip", false], ["image.gif", false], ["a.pdfx", false],
+    ["notes.txt", false], ["a.pdf.zip", false], ["doc.docx", false], ["photo.heic", false], ["scan.tiff", false], ["a.pdfx", false],
     ["__MACOSX/a.pdf", false], ["folder/__MACOSX/._a.pdf", false], [".hidden.pdf", false],
     ["folder/.secret/a.pdf", false], ["._a.pdf", false],
   ])("isAcceptedName(%s) -> %s", (n, ok) => expect(C.isAcceptedName(n)).toBe(ok));
@@ -78,6 +79,11 @@ describe("file acceptance", () => {
   it("detects images and zips", () => {
     expect(C.isImageName("a.JPG")).toBe(true);
     expect(C.isImageName("a.png")).toBe(true);
+    expect(C.isImageName("a.webp")).toBe(true);
+    expect(C.isImageName("a.GIF")).toBe(true);
+    expect(C.isImageName("a.bmp")).toBe(true);
+    expect(C.isImageName("a.avif")).toBe(true);
+    expect(C.isImageName("a.heic")).toBe(false);
     expect(C.isImageName("a.pdf")).toBe(false);
     expect(C.isZipName("Trip_Docs-20260101T0400Z-001.zip")).toBe(true);
     expect(C.isZipName("a.pdf")).toBe(false);

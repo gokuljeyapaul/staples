@@ -40,10 +40,11 @@ back in charge.
 **Merging**
 - Repeats `*_N_copies` files N times — automatically, no extra clicks
 - Merge order is the queue, top to bottom: drag to reorder, ▲▼ to nudge, **Sort A–Z** for the tidy-minded
-- Accepts PDFs, JPG/PNG scans (each becomes a clean A4 page, centred with a margin) and ZIPs — including Google Drive "Download folder" zips, nested folders and all
+- Accepts PDFs, image scans — JPG, PNG, WebP, GIF, BMP, AVIF — each becoming a clean A4 page, centred with a margin, plus ZIPs — including Google Drive "Download folder" zips, nested folders and all
 - Junk never makes it in: `__MACOSX`, `.DS_Store` and dotfiles are filtered on arrival
 - Duplicates (same name + size) are skipped — and it tells on you
 - Corrupt files are flagged and skipped, never silently swallowed
+- Unknown types are refused with a nudge — a toast tells you what to export or convert before you wonder where your file went
 - Owner-locked PDFs are flattened to images and merged anyway
 - Password-protected PDFs are skipped with a reason: Staple merges paperwork, it doesn't crack safes
 
@@ -71,7 +72,7 @@ In writing, because honesty is a feature:
 - **Browser-bound.** No sync, no share links, no "open it on my other laptop". The pile lives in this browser, on this machine.
 - **No password cracking.** Password-protected PDFs are skipped. There are tools for that; this isn't one.
 - **Locked PDFs become images.** Owner-encrypted PDFs are rasterised to merge, so their text is no longer selectable and the output gets chunkier.
-- **JPG and PNG only.** HEIC, TIFF, GIF, WebP — convert first. Yes, that includes your iPhone photos.
+- **HEIC and TIFF: convert first.** iPhone photos: export as JPEG. Everything else image-shaped — JPG, PNG, WebP, GIF, BMP, AVIF — just works.
 - **Pages travel with their file.** Reorder files and copies at will, but a lone page can't be moved from one file into another.
 - **The rule is literal.** `Ticket_3_copies_final.pdf` gets 1 copy; the suffix must sit at the end.
 - **Big piles are heavy.** Merging happens in your tab's memory and browser storage has a quota. A 500 MB scan pile will test both.
@@ -94,7 +95,7 @@ Short, because there's nothing to hide behind:
 - Want zero external requests? Self-host: one HTML file, `npm run serve`, done.
 - Leave any time: **Clear browser storage** wipes IndexedDB and localStorage, permanently.
 
-Full details and a two-minute self-verification guide live in [PRIVACY.md](PRIVACY.md).
+Full details and a two-minute self-verification guide live in [PRIVACY.md](PRIVACY.md) — and the app links to a live version at [`/privacy.html`](https://gokuljeyapaul.github.io/staples/privacy.html), including how much it can handle.
 
 ## Credits
 

@@ -227,6 +227,21 @@ test.describe("input formats", () => {
     expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
   });
 
+  test("WebP, GIF and BMP scans each become one page", async ({ app }) => {
+    await app.upload("Scan_Webp.webp", "Scan_Gif.gif", "Scan_Bmp.bmp");
+    await expect(app.files()).toHaveCount(3);
+    expect(await app.idle()).toBe(3);
+    const { markers } = await app.download();
+    expect(markers).toEqual(["", "", ""]);   // image pages carry no text markers
+  });
+
+  test("unsupported types are refused with a helpful nudge", async ({ app, page }) => {
+    await app.upload("Transcript.pdf", "Notes.docx");
+    await expect(app.files()).toHaveCount(1);
+    await expect(page.locator(".toast", { hasText: ".docx can’t be read yet" })).toBeVisible();
+    expect(await app.idle()).toBe(1);
+  });
+
   test("duplicates are skipped", async ({ app, page }) => {
     await app.upload("Transcript.pdf");
     await expect(app.files()).toHaveCount(1);

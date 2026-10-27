@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Staple — Privacy &amp; limits</title>
+<meta name="theme-color" content="#2B2FD9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16123A; --ink-soft:#5A5878; --paper:#F6F7FB; --card:#FFFFFF; --line:#DCDDEA;
+  --stamp:#2B2FD9; --hi:#FFE14D; --danger:#D92D20;
+  --shadow:0 1px 0 rgba(22,18,58,.06), 0 8px 24px -12px rgba(22,18,58,.25);
+  --font:"Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#ECEBFF; --ink-soft:#A3A1C7; --paper:#14122B; --card:#1E1B3D; --line:#34305E;
+    --stamp:#7C80FF; --hi:#FFE14D; --danger:#FF6B5E; color-scheme: dark; }
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6}
+main{max-width:820px;margin:0 auto;padding:28px 20px 80px}
+a{color:var(--stamp)}
+.back{display:inline-flex;align-items:center;gap:6px;font-weight:700;text-decoration:none;border:2px solid var(--ink);border-radius:12px;padding:8px 14px;background:var(--card);margin-bottom:28px}
+.back:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+h1{font-size:clamp(34px,6vw,52px);line-height:1;font-weight:800;letter-spacing:-.03em;margin:0 0 10px}
+h1 small{display:block;font-size:16px;font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-top:10px}
+h2{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:44px 0 12px;border-bottom:3px solid var(--hi);display:table;padding-bottom:2px}
+h2:first-of-type{margin-top:26px}
+p{margin:0 0 14px;max-width:70ch}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:16px;padding:18px 20px;margin:0 0 14px;box-shadow:4px 4px 0 var(--stamp)}
+.card p{margin:0}
+.card b:first-child{color:var(--stamp)}
+table{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--card);border:2px solid var(--ink);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--stamp);color:#fff;font-weight:700;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:700;white-space:nowrap}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:var(--hi);color:#16123A;padding:1px 6px;border-radius:6px}
+footer{margin-top:44px;color:var(--ink-soft);font-size:13.5px;border-top:1.5px dashed var(--line);padding-top:16px}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">&#8592; Back to Staple</a>
+
+  <h1>Privacy &amp; limits
+    <small>The short version: your documents never leave this device — and here's exactly how far this little app can be pushed.</small>
+  </h1>
+
+  <h2>Privacy</h2>
+  <div class="card"><p><b>No server. No account. No analytics. No cookies.</b> Staple is one static HTML file. There is no backend, no database, and no upload endpoint — so it <i>cannot</i> send your documents anywhere, by design and by architecture.</p></div>
+  <div class="card"><p><b>What happens to your files:</b> read by the browser's File APIs, kept in your browser's IndexedDB (<code>staple-db</code>), merged in your tab's memory, written straight to a download. All local. Nothing is uploaded, ever.</p></div>
+  <div class="card"><p><b>The only network requests:</b> four pinned library files from <code>cdnjs.cloudflare.com</code> (pdf-lib, pdf.js + its worker, JSZip) and one font from Google Fonts — loaded once, then served from your browser's cache. Those CDNs see an IP address making a request; they never see a byte of your paperwork.</p></div>
+  <div class="card"><p><b>Where your data lives:</b> IndexedDB database <code>staple-db</code> (files, order, copies, removals) and two localStorage keys (<code>staple-theme</code>, <code>staple-fname</code>). That's the complete list.</p></div>
+  <div class="card"><p><b>Verify it yourself:</b> open DevTools &rarr; <b>Network</b> and drop a document in — no request contains your file. Check <b>Application &rarr; IndexedDB</b> — your pile is sitting there, locally. Or read the code: the site you're using is the code in the <a href="https://github.com/gokuljeyapaul/staples">public repository</a>, line for line.</p></div>
+  <div class="card"><p><b>Leave any time:</b> the <i>Clear browser storage</i> button wipes IndexedDB and localStorage completely. There's no copy kept behind, because there's nowhere to keep one.</p></div>
+
+  <h2>How much can Staple handle?</h2>
+  <p>Staple runs entirely on your device, so its ceiling is <i>your</i> device's ceiling. The honest numbers:</p>
+  <table>
+    <tr><th>Dimension</th><th>Limit</th><th>The fine print</th></tr>
+    <tr><td>Copies per file</td><td>99</td><td>Hard cap, by design. If the embassy wants more than 99, the embassy is being unreasonable.</td></tr>
+    <tr><td>Pages in the merged PDF</td><td>No hard cap</td><td>Thousands of pages work; every page gets its own preview card, so very large piles make the page itself heavier. A few hundred pages is the comfort zone.</td></tr>
+    <tr><td>File types</td><td>PDF, JPG, PNG, WebP, GIF, BMP, AVIF</td><td>Images become one A4 page each. Owner-locked PDFs are flattened to images; password-protected PDFs are skipped. Word docs, HEIC, TIFF? The app tells you to export or convert first — out loud, never silently.</td></tr>
+    <tr><td>Storage (the pile)</td><td>Browser quota</td><td>Files are kept in IndexedDB. Chrome lets a site use roughly 60% of free disk; Safari is stingier. The meter at the bottom of the pile shows live usage. If storage fills up, new files last only until the tab closes — a toast warns you.</td></tr>
+    <tr><td>Memory (the merge)</td><td>Your tab's RAM</td><td>Source files plus the merged PDF live in memory while you work. A pile of a few hundred MB is comfortable on a laptop; a single 500&nbsp;MB scan will test both your patience and your cooling fan.</td></tr>
+    <tr><td>Locked PDFs</td><td>Output grows</td><td>Encrypted pages are re-encoded as images at 2.2&times; zoom, so merged output gets chunkier than the source.</td></tr>
+    <tr><td>Devices</td><td>One browser</td><td>No sync, no share links. The pile lives in this browser on this machine — browser storage is a desk, not a filing cabinet. Keep your originals.</td></tr>
+  </table>
+
+  <footer>
+    Staple merges paperwork in your browser and forgets how to gossip. Source code, tests and the full privacy file:
+    <a href="https://github.com/gokuljeyapaul/staples">github.com/gokuljeyapaul/staples</a>.
+  </footer>
+</main>
+</body>
+</html>
