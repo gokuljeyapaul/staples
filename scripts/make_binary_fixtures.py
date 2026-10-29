@@ -34,4 +34,11 @@ img.rotate(90, expand=True).save(out / "Visa_Scan.jpg", quality=85)   # portrait
 # Formats the browser decodes natively; the app re-encodes them onto an A4 page.
 for fmt in ("webp", "gif", "bmp"):
     img.save(out / f"Scan_{fmt.title()}.{fmt}")
+# HEIC needs the optional pillow-heif (pip install pillow-heif).
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+    img.save(out / "Scan_Heic.heic")
+except ImportError:
+    pass
 print("fixtures written to", out)

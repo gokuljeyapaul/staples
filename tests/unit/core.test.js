@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { loadCore, file, html } from "../helpers/core.js";
 
 const C = loadCore();
@@ -71,7 +72,8 @@ describe("file acceptance", () => {
     ["a.pdf", true], ["A.PDF", true], ["scan.jpg", true], ["scan.JPEG", true], ["scan.png", true],
     ["scan.webp", true], ["scan.WEBP", true], ["photo.gif", true], ["photo.bmp", true], ["photo.avif", true],
     ["Drive Folder/sub/a.pdf", true], ["Drive Folder\\a.pdf", true],
-    ["notes.txt", false], ["a.pdf.zip", false], ["doc.docx", false], ["photo.heic", false], ["scan.tiff", false], ["a.pdfx", false],
+    ["notes.txt", true], ["readme.md", true], ["grades.csv", true], ["scan.heic", true],
+    ["a.pdf.zip", false], ["doc.docx", false], ["sheet.xlsx", false], ["scan.tiff", false], ["a.pdfx", false],
     ["__MACOSX/a.pdf", false], ["folder/__MACOSX/._a.pdf", false], [".hidden.pdf", false],
     ["folder/.secret/a.pdf", false], ["._a.pdf", false],
   ])("isAcceptedName(%s) -> %s", (n, ok) => expect(C.isAcceptedName(n)).toBe(ok));
@@ -83,10 +85,18 @@ describe("file acceptance", () => {
     expect(C.isImageName("a.GIF")).toBe(true);
     expect(C.isImageName("a.bmp")).toBe(true);
     expect(C.isImageName("a.avif")).toBe(true);
-    expect(C.isImageName("a.heic")).toBe(false);
+    expect(C.isImageName("a.heic")).toBe(true);
     expect(C.isImageName("a.pdf")).toBe(false);
     expect(C.isZipName("Trip_Docs-20260101T0400Z-001.zip")).toBe(true);
     expect(C.isZipName("a.pdf")).toBe(false);
+  });
+
+  it("detects text files", () => {
+    expect(C.isTextName("notes.TXT")).toBe(true);
+    expect(C.isTextName("readme.md")).toBe(true);
+    expect(C.isTextName("grades.CSV")).toBe(true);
+    expect(C.isTextName("notes.pdf")).toBe(false);
+    expect(C.isTextName("notes.md.pdf")).toBe(false);
   });
 
   it("treats same name + same size as a duplicate, and nothing else", () => {
@@ -297,6 +307,36 @@ describe("ordering", () => {
   it("sortByName is numeric-aware and case-insensitive", () => {
     const names = ["Page_10.pdf", "page_2.pdf", "Page_1.pdf"].map(name => ({ name }));
     expect(C.sortByName(names).map(f => f.name)).toEqual(["Page_1.pdf", "page_2.pdf", "Page_10.pdf"]);
+  });
+});
+
+describe("text files become PDFs", () => {
+  it("sanitizeText keeps Latin text and whitespace, replaces the exotic", () => {
+    expect(C.sanitizeText("héllo wörld\tline\n2")).toBe("héllo wörld\tline\n2");
+    expect(C.sanitizeText("naïve — ok 你好")).toBe("naïve ? ok ??");
+    expect(C.sanitizeText("")).toBe("");
+    expect(C.sanitizeText(null)).toBe("");
+  });
+
+  it("splitCsv respects quotes, doubled quotes and trailing cells", () => {
+    expect(C.splitCsv("a,b,c")).toEqual(["a", "b", "c"]);
+    expect(C.splitCsv('"a,b",c')).toEqual(["a,b", "c"]);
+    expect(C.splitCsv('"say ""hi""",x')).toEqual(['say "hi"', "x"]);
+    expect(C.splitCsv("a,,")).toEqual(["a", "", ""]);
+  });
+
+  it("short text becomes one A4 page; long text paginates", async () => {
+    const one = await PDFDocument.load(await C.textToPdf(PDFDocument, StandardFonts, "Hello, world.\nSecond line.", {}));
+    expect(one.getPageCount()).toBe(1);
+    expect(one.getPage(0).getSize()).toMatchObject({ width: 595.28, height: 841.89 });
+    const long = Array.from({ length: 300 }, (_, i) => `Line ${i} with enough words to fill several A4 pages of text over and over again.`).join("\n");
+    expect((await PDFDocument.load(await C.textToPdf(PDFDocument, StandardFonts, long, {}))).getPageCount()).toBeGreaterThan(3);
+  });
+
+  it("a wide CSV grid shrinks but never overflows the page", async () => {
+    const csv = 'Name,Score,Comment\nAlice,90,""excellent all round""\nBob,85,ok\n';
+    const doc = await PDFDocument.load(await C.textToPdf(PDFDocument, StandardFonts, csv, { csv: true }));
+    expect(doc.getPageCount()).toBe(1);
   });
 });
 

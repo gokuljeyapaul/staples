@@ -40,7 +40,7 @@ back in charge.
 **Merging**
 - Repeats `*_N_copies` files N times — automatically, no extra clicks
 - Merge order is the queue, top to bottom: drag to reorder, ▲▼ to nudge, **Sort A–Z** for the tidy-minded
-- Accepts PDFs, image scans — JPG, PNG, WebP, GIF, BMP, AVIF — each becoming a clean A4 page, centred with a margin, plus ZIPs — including Google Drive "Download folder" zips, nested folders and all
+- Accepts PDFs; image scans — JPG, PNG, WebP, GIF, BMP, AVIF, and HEIC via a decoder fetched only when one shows up; TXT, MD and CSV as clean, selectable text pages; plus ZIPs — including Google Drive "Download folder" zips, nested folders and all
 - Junk never makes it in: `__MACOSX`, `.DS_Store` and dotfiles are filtered on arrival
 - Duplicates (same name + size) are skipped — and it tells on you
 - Corrupt files are flagged and skipped, never silently swallowed
@@ -72,7 +72,8 @@ In writing, because honesty is a feature:
 - **Browser-bound.** No sync, no share links, no "open it on my other laptop". The pile lives in this browser, on this machine.
 - **No password cracking.** Password-protected PDFs are skipped. There are tools for that; this isn't one.
 - **Locked PDFs become images.** Owner-encrypted PDFs are rasterised to merge, so their text is no longer selectable and the output gets chunkier.
-- **HEIC and TIFF: convert first.** iPhone photos: export as JPEG. Everything else image-shaped — JPG, PNG, WebP, GIF, BMP, AVIF — just works.
+- **TIFF: convert first.** HEIC works too (via a lazily-fetched decoder). Everything else image-shaped — JPG, PNG, WebP, GIF, BMP, AVIF — just works.
+- **Text pages are Latin-only and no-frills.** Standard PDF fonts mean exotic scripts render as `?`, and Markdown styling stops at headings and bullets.
 - **Pages travel with their file.** Reorder files and copies at will, but a lone page can't be moved from one file into another.
 - **The rule is literal.** `Ticket_3_copies_final.pdf` gets 1 copy; the suffix must sit at the end.
 - **Big piles are heavy.** Merging happens in your tab's memory and browser storage has a quota. A 500 MB scan pile will test both.
@@ -135,7 +136,7 @@ Every test PDF page carries a text marker `SRC=<file>;P=<page>`, so the download
 exact page order is verified, not just its page count.
 
 Binary fixtures (locked PDFs, PNG/JPG scans) live in `tests/fixtures`; regenerate with
-`pip install pikepdf pillow && python scripts/make_binary_fixtures.py`.
+`pip install pikepdf pillow pillow-heif && python scripts/make_binary_fixtures.py`.
 
 The "Cannot polyfill DOMMatrix/Path2D" warnings come from pdf.js in Node (no `canvas`
 package); tests only extract text there, so they are harmless.

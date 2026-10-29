@@ -27,6 +27,18 @@ export async function readMarkers(bytes) {
   return out;
 }
 
+/** Every page's extracted text, for verifying text-based conversions. */
+export async function readText(bytes) {
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), disableFontFace: true, verbosity: 0 }).promise;
+  const pages = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const tc = await (await doc.getPage(p)).getTextContent();
+    pages.push(tc.items.map(i => i.str).join(" "));
+  }
+  await doc.destroy();
+  return pages;
+}
+
 export async function pageSizes(bytes) {
   const doc = await PDFDocument.load(bytes);
   return doc.getPages().map(p => { const { width, height } = p.getSize(); return [+width.toFixed(2), +height.toFixed(2)]; });

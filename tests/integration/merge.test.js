@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
 import { loadCore, html, file } from "../helpers/core.js";
-import { makePdf, readMarkers, pageSizes, expectedMarkers, DRIVE_SET, DRIVE_SET_PAGES, PAGE_SIZES } from "../helpers/pdf.js";
+import { makePdf, readMarkers, readText, pageSizes, expectedMarkers, DRIVE_SET, DRIVE_SET_PAGES, PAGE_SIZES } from "../helpers/pdf.js";
 
 const C = loadCore();
 const fixture = name => readFileSync(fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url)));
@@ -143,6 +143,33 @@ describe("images become pages", () => {
   });
 });
 
+describe("text files become PDFs", () => {
+  it("TXT: every line lands, wrapped and paginated", async () => {
+    const lines = Array.from({ length: 300 }, (_, i) => `Line ${i + 1}: the quick brown fox jumps over the lazy dog again and again.`);
+    const pages = await readText(await C.textToPdf(PDFDocument, StandardFonts, lines.join("\n"), {}));
+    expect(pages.length).toBeGreaterThan(5);
+    expect(pages.join(" ")).toContain("Line 1:");
+    expect(pages.join(" ")).toContain("Line 300:");
+  });
+
+  it("MD: headings, bullets and stripped emphasis render as selectable text", async () => {
+    const md = "# Trip Plan\n\n- Book **hotel**\n- _Print_ tickets\n\n## Day 1\n\nWalk around.";
+    const text = (await readText(await C.textToPdf(PDFDocument, StandardFonts, md, { md: true }))).join(" ");
+    expect(text).toContain("Trip Plan");
+    expect(text).toContain("Book hotel");
+    expect(text).toContain("Print tickets");
+    expect(text).not.toContain("**");
+  });
+
+  it("CSV: rows align in a mono grid and quoted commas survive", async () => {
+    const csv = 'Name,Score\n"Alice, Jr",90\nBob,85\n';
+    const text = (await readText(await C.textToPdf(PDFDocument, StandardFonts, csv, { csv: true })))[0].replace(/\s+/g, " ");
+    expect(text).toContain("Name");
+    expect(text).toContain("Alice, Jr");
+    expect(text).toContain("90");
+  });
+});
+
 describe("assumptions the app relies on", () => {
   it("pdf-lib refuses locked PDFs with an error mentioning encryption (drives the 🔒 flatten path)", async () => {
     await expect(PDFDocument.load(fixture("Locked_Owner_Only.pdf"))).rejects.toThrow(/encrypt/i);
@@ -171,5 +198,9 @@ describe("assumptions the app relies on", () => {
     const srcs = [...html().matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
     expect(srcs.length).toBe(4);
     for (const s of srcs) expect(s).toMatch(/^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/[\w.-]+\/\d+\.\d+\.\d+\//);
+  });
+
+  it("the lazily-fetched HEIC decoder is pinned to the tested version", () => {
+    expect(html()).toContain(`heic2any/${pkg.devDependencies.heic2any}/heic2any.min.js`);
   });
 });

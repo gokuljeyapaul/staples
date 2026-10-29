@@ -13,8 +13,11 @@ export default async function globalSetup() {
   await writeFile(GEN + "Extra_Doc.pdf", await makePdf("Extra_Doc.pdf", 1));
   await writeFile(GEN + "Broken.pdf", "this is not a pdf at all");
   await writeFile(GEN + "Notes.docx", "rejection is by extension, so this can be fake");
+  await writeFile(GEN + "Notes.txt", "Plain text notes.\nSecond line with enough words to wrap around the page once or twice.\n");
+  await writeFile(GEN + "Syllabus.md", "# Course Outline\n\n## Week 1\n\n- Read chapter one\n- Do the **exercises**\n\nA short paragraph about grading.\n");
+  await writeFile(GEN + "Grades.csv", "Name,Score\nAlice,90\nBob,85\n");
   for (const f of ["Locked_Owner_Only.pdf", "Password_Required.pdf", "Passport_Scan.png", "Visa_Scan.jpg",
-    "Scan_Webp.webp", "Scan_Gif.gif", "Scan_Bmp.bmp"]) await copyFile(FIX + f, GEN + f);
+    "Scan_Webp.webp", "Scan_Gif.gif", "Scan_Bmp.bmp", "Scan_Heic.heic"]) await copyFile(FIX + f, GEN + f);
 
   // What Google Drive hands you for "Download folder": nested folder + OS junk.
   const zip = new JSZip();

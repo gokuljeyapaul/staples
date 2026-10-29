@@ -247,7 +247,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   <aside class="queue" aria-label="Source files">
     <div class="drop" id="drop">
       <h2>Feed me PDFs</h2>
-      <p>Drop files, a whole folder, or the zip Google Drive gives you. JPG and PNG scans work too.</p>
+      <p>Drop files, a whole folder, or the zip Google Drive gives you. JPG, PNG, WebP, HEIC and other scans work too, and TXT, MD and CSV become tidy text pages.</p>
       <div class="row">
         <button class="btn small" id="pickFiles">Pick files</button>
         <button class="btn small" id="pickFolder">Pick folder</button>
@@ -358,10 +358,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   function isAcceptedName(path) {
     const parts = String(path).split(/[\\/]/);
     if (parts.some(p => p === "__MACOSX" || p.startsWith("."))) return false;
-    return /\.(pdf|jpe?g|png|webp|gif|bmp|avif)$/i.test(parts[parts.length - 1]);
+    return /\.(pdf|jpe?g|png|webp|gif|bmp|avif|heic|txt|md|csv)$/i.test(parts[parts.length - 1]);
   }
-  const isImageName = n => /\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(n);
+  const isImageName = n => /\.(jpe?g|png|webp|gif|bmp|avif|heic)$/i.test(n);
   const isZipName = n => /\.zip$/i.test(n);
+  const isTextName = n => /\.(txt|md|csv)$/i.test(n);
 
   /** A page of the merged PDF is identified by which copy of the file and which source page. */
   const pageKey = (copy, srcPage) => `${copy}.${srcPage}`;
@@ -447,6 +448,89 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     return (await doc.save()).buffer;
   }
 
+  /* Standard PDF fonts cover Latin text only; anything else renders as ?. */
+  const sanitizeText = s => String(s ?? "").replace(/[^\t\n\r\x20-\x7E\xA0-\xFF]/g, "?");
+
+  /** One CSV line -> cells, with "quoted, commas" and doubled quotes respected. */
+  function splitCsv(line) {
+    const out = []; let cur = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (q) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') q = false;
+        else cur += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ",") { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  /** Plain text, Markdown or CSV -> an A4 PDF of selectable text. */
+  async function textToPdf(PDFDocument, StandardFonts, text, opts = {}) {
+    const out = await PDFDocument.create();
+    const mono = !!opts.csv;
+    const body = await out.embedFont(mono ? StandardFonts.Courier : StandardFonts.Helvetica);
+    const W = 595.28, H = 841.89, M = 56;
+    let page = out.addPage([W, H]), y = H - M, size = mono ? 9 : 11;
+
+    const wrap = (str, f, sz, max) => {
+      const words = String(str).split(/\s+/).filter(Boolean);
+      const lines = []; let line = "";
+      for (const w of words) {
+        const t = line ? line + " " + w : w;
+        if (f.widthOfTextAtSize(t, sz) <= max) { line = t; continue; }
+        if (line) { lines.push(line); line = ""; }
+        if (f.widthOfTextAtSize(w, sz) <= max) { line = w; continue; }
+        let i = 0;
+        while (i < w.length) {                       // hard-break a word that alone overflows
+          let j = w.length;
+          while (j > i + 1 && f.widthOfTextAtSize(w.slice(i, j), sz) > max) j--;
+          lines.push(w.slice(i, j)); i = j;
+        }
+      }
+      if (line) lines.push(line);
+      return lines.length ? lines : [""];
+    };
+    const draw = (str, f, sz, gapAfter = 0) => {
+      for (const l of wrap(str, f, sz, W - 2 * M)) {
+        if (y < M + sz) { page = out.addPage([W, H]); y = H - M; }
+        page.drawText(l, { x: M, y: y - sz, size: sz, font: f });
+        y -= sz * 1.45;
+      }
+      y -= gapAfter;
+    };
+
+    const src = sanitizeText(text);
+    if (opts.md) {
+      const head = await out.embedFont(StandardFonts.HelveticaBold);
+      for (const raw of src.split(/\r?\n/)) {
+        const line = raw.trimEnd();
+        if (/^###\s+/.test(line)) draw(line.replace(/^###\s+/, ""), head, 12.5, 4);
+        else if (/^##\s+/.test(line)) draw(line.replace(/^##\s+/, ""), head, 14, 6);
+        else if (/^#\s+/.test(line)) draw(line.replace(/^#\s+/, ""), head, 17, 8);
+        else if (/^[-*]\s+/.test(line)) draw("• " + line.replace(/^[-*]\s+/, "").replace(/[*_`]/g, ""), body, size, 2);
+        else if (line) draw(line.replace(/[*_`]/g, ""), body, size, 2);
+        else y -= size * .9;
+      }
+    } else if (mono) {
+      const rows = src.split(/\r?\n/).filter(Boolean).map(splitCsv);
+      const widths = (rows[0] || []).map((_, i) => Math.max(...rows.map(r => (r[i] ?? "").length)));
+      const grid = rows.map(r => r.map((c, i) => (c ?? "").padEnd(widths[i])).join("  "));
+      let sz = size;                    // Courier chars are exactly .6*size wide: shrink to fit
+      while (sz > 5 && Math.max(...grid.map(l => l.length)) * .6 * sz > W - 2 * M) sz--;
+      for (const line of grid) draw(line, body, sz, 0);
+    } else {
+      for (const para of src.split(/\r?\n/)) {
+        if (para.trim()) draw(para, body, size, 2);
+        else y -= size * .9;
+      }
+    }
+    return (await out.save()).buffer;
+  }
+
   /** Merge plan blocks. getSrc(file) -> pdf-lib PDFDocument. Returns Uint8Array, or null if cancelled. */
   async function mergeBlocks(PDFDocument, blocks, getSrc, opts = {}) {
     const out = await PDFDocument.create();
@@ -464,9 +548,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
   root.StapleCore = Object.freeze({
     COPIES_RE, MAX_COPIES, copiesFromName, effCopies, clampCopies, shortName,
-    isAcceptedName, isImageName, isZipName, pageKey, isRemoved, withRemoved, buildPlan, planSignature, rangeLabel,
+    isAcceptedName, isImageName, isZipName, isTextName, pageKey, isRemoved, withRemoved, buildPlan, planSignature, rangeLabel,
     sanitizeFilename, defaultFilename, moveItem, moveRelative, sortByName, isDuplicate,
-    imageToPdf, mergeBlocks,
+    imageToPdf, sanitizeText, splitCsv, textToPdf, mergeBlocks,
   });
 })(typeof window !== "undefined" ? window : globalThis);
 </script>
@@ -477,10 +561,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
    Everything lives in this browser (IndexedDB + localStorage).
    AI hook: see `AI` near the bottom; plug features in there later.
    ===================================================================== */
-const { PDFDocument } = PDFLib;
+const { PDFDocument, StandardFonts } = PDFLib;
 const { copiesFromName, effCopies, clampCopies, shortName, isAcceptedName, isImageName, isZipName,
   buildPlan, planSignature, rangeLabel, sanitizeFilename, defaultFilename, moveItem, moveRelative,
-  sortByName, isDuplicate, imageToPdf, mergeBlocks, withRemoved } = StapleCore;
+  sortByName, isDuplicate, imageToPdf, mergeBlocks, withRemoved, isTextName, textToPdf } = StapleCore;
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 const PALETTE = ["#E0352B","#2B6FEB","#D98A00","#178F55","#8B3FD9","#D9437F","#0B93A6","#B5480C","#4F46E5","#5E8F0A","#9C2F6B","#0F766E"];
@@ -542,11 +626,29 @@ async function saveAllMeta() {
 /* ---------------- ingest ---------------- */
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
-/* Any image -> one A4 PDF. JPG/PNG embed raw bytes; WebP/GIF/BMP/AVIF are decoded
-   by the browser, painted on white (JPEG has no transparency) and re-encoded. */
+const loaded = {};   // url -> Promise, so lazily-fetched libraries load once
+function loadScript(src) {
+  return loaded[src] || (loaded[src] = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = res;
+    s.onerror = () => { delete loaded[src]; rej(new Error("couldn’t load " + src)); };
+    document.head.append(s);
+  }));
+}
+
+/* Any image -> one A4 PDF. JPG/PNG embed raw bytes; WebP/GIF/BMP/AVIF are decoded by the
+   browser, painted on white (JPEG has no transparency) and re-encoded; HEIC gets a
+   lazily-fetched decoder because only Safari can read it natively. */
 async function toImagePdf(buf, name) {
   if (/\.png$/i.test(name)) return imageToPdf(PDFDocument, buf, true);
   if (/\.jpe?g$/i.test(name)) return imageToPdf(PDFDocument, buf, false);
+  if (/\.heic$/i.test(name)) {
+    if (!window.heic2any) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js");
+    const out = await heic2any({ blob: new Blob([buf]), toType: "image/jpeg", quality: .92 });
+    const blob = Array.isArray(out) ? out[0] : out;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    return imageToPdf(PDFDocument, bytes, bytes[0] === 0x89 && bytes[1] === 0x50);
+  }
   const bitmap = await createImageBitmap(new Blob([buf]));
   const c = document.createElement("canvas");
   c.width = bitmap.width; c.height = bitmap.height;
@@ -587,6 +689,9 @@ async function ingest(fileList) {
     if (isImageName(it.name)) {
       try { bytes = await toImagePdf(it.data, it.name); }
       catch { toast(`Couldn’t read the image ${it.name}.`, true); continue; }
+    } else if (isTextName(it.name)) {
+      try { bytes = await textToPdf(PDFDocument, StandardFonts, new TextDecoder().decode(it.data), { csv: /\.csv$/i.test(it.name), md: /\.md$/i.test(it.name) }); }
+      catch { toast(`Couldn’t read the text file ${it.name}.`, true); continue; }
     }
     const f = {
       id: uid(), name: it.name, size: it.data.byteLength, pages: 0,

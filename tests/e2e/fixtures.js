@@ -11,6 +11,7 @@ const CDN = {
   "pdf.js/3.11.174/pdf.min.js": nm("pdfjs-dist/build/pdf.min.js"),
   "pdf.js/3.11.174/pdf.worker.min.js": nm("pdfjs-dist/build/pdf.worker.min.js"),
   "jszip/3.10.1/jszip.min.js": nm("jszip/dist/jszip.min.js"),
+  "heic2any/0.0.4/heic2any.min.js": nm("heic2any/dist/heic2any.min.js"),
 };
 export const GEN = fileURLToPath(new URL("../.generated/", import.meta.url));
 export const gen = (...names) => names.map(n => GEN + n);

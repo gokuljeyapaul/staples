@@ -214,9 +214,9 @@ test.describe("page inspector", () => {
 test.describe("input formats", () => {
   test("Drive zip: nested folders kept, junk ignored", async ({ app }) => {
     await app.upload("Trip_Docs-20260101.zip");
-    await expect(app.files()).toHaveCount(3);
-    expect((await app.fileOrder()).sort()).toEqual(["Passport_Scan.png", "Ticket_3_Copies.pdf", "Transcript.pdf"]);
-    expect(await app.idle()).toBe(2 * 3 + 1 + 1);
+    await expect(app.files()).toHaveCount(4);   // notes.txt is fair game now; only OS junk is ignored
+    expect((await app.fileOrder()).sort()).toEqual(["Passport_Scan.png", "Ticket_3_Copies.pdf", "Transcript.pdf", "notes.txt"]);
+    expect(await app.idle()).toBe(2 * 3 + 1 + 1 + 1);
   });
 
   test("PNG and JPG scans each become one page", async ({ app, page }) => {
@@ -233,6 +233,20 @@ test.describe("input formats", () => {
     expect(await app.idle()).toBe(3);
     const { markers } = await app.download();
     expect(markers).toEqual(["", "", ""]);   // image pages carry no text markers
+  });
+
+  test("TXT, MD and CSV each become one tidy text page", async ({ app }) => {
+    await app.upload("Notes.txt", "Syllabus.md", "Grades.csv");
+    await expect(app.files()).toHaveCount(3);
+    expect(await app.idle()).toBe(3);
+    const { markers } = await app.download();
+    expect(markers).toEqual(["", "", ""]);
+  });
+
+  test("an iPhone HEIC scan becomes one page", async ({ app }) => {
+    await app.upload("Scan_Heic.heic");
+    await expect(app.files()).toHaveCount(1);
+    expect(await app.idle()).toBe(1);
   });
 
   test("unsupported types are refused with a helpful nudge", async ({ app, page }) => {

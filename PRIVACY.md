@@ -22,6 +22,7 @@ this page is verifiable in about two minutes, using only your browser.
 |---|---|
 | Four pinned files from `cdnjs.cloudflare.com` (pdf-lib, pdf.js + its worker, JSZip) | The app's code. Loaded once, then served from your browser's cache. |
 | One font from Google Fonts | The typeface. |
+| One pinned HEIC decoder from `cdnjs.cloudflare.com`, fetched only if you drop an iPhone photo, then cached | heic2any — every browser except Safari needs it to decode HEIC. The photo itself is decoded locally. |
 
 Those CDNs see an IP address making a request — as every site you visit does.
 They never see your documents. GitHub Pages, like any website host, keeps
