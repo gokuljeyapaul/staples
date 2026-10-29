@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Staple — one PDF to rule the paperwork</title>
 <meta name="theme-color" content="#2B2FD9">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'none'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; media-src 'none'; worker-src 'self' blob:">
+<!-- CSP notes: 'unsafe-eval' is needed by the HEIC decoder's WASM glue, 'blob:' workers by
+     its internal worker. Connections stay forbidden (connect-src 'none'), so even eval'd
+     code cannot send a byte anywhere. Sources are pinned to this file and cdnjs. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
@@ -358,11 +364,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   function isAcceptedName(path) {
     const parts = String(path).split(/[\\/]/);
     if (parts.some(p => p === "__MACOSX" || p.startsWith("."))) return false;
-    return /\.(pdf|jpe?g|png|webp|gif|bmp|avif|heic|txt|md|csv)$/i.test(parts[parts.length - 1]);
+    return /\.(pdf|jpe?g|png|webp|gif|bmp|avif|heic|txt|md|csv|xlsx)$/i.test(parts[parts.length - 1]);
   }
   const isImageName = n => /\.(jpe?g|png|webp|gif|bmp|avif|heic)$/i.test(n);
   const isZipName = n => /\.zip$/i.test(n);
   const isTextName = n => /\.(txt|md|csv)$/i.test(n);
+  const isSheetName = n => /\.xlsx$/i.test(n);
 
   /** A page of the merged PDF is identified by which copy of the file and which source page. */
   const pageKey = (copy, srcPage) => `${copy}.${srcPage}`;
@@ -503,8 +510,24 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       y -= gapAfter;
     };
 
+    const drawGrid = rows => {
+      const cells = rows.map(r => r.map(c => sanitizeText(String(c ?? ""))));
+      const widths = (cells[0] || []).map((_, i) => Math.max(...cells.map(r => (r[i] ?? "").length)));
+      const grid = cells.map(r => r.map((c, i) => c.padEnd(widths[i])).join("  "));
+      let sz = size;                    // Courier chars are exactly .6*size wide: shrink to fit
+      while (sz > 5 && Math.max(...grid.map(l => l.length)) * .6 * sz > W - 2 * M) sz--;
+      for (const line of grid) draw(line, body, sz, 2);
+    };
+
     const src = sanitizeText(text);
-    if (opts.md) {
+    if (opts.sheets) {
+      const head = await out.embedFont(StandardFonts.HelveticaBold);
+      for (const [i, sheet] of opts.sheets.entries()) {
+        if (i) { y -= size * 1.6; if (y < M + size * 3) { page = out.addPage([W, H]); y = H - M; } }
+        draw(sanitizeText(sheet.name), head, 13, 6);
+        drawGrid(sheet.rows);
+      }
+    } else if (opts.md) {
       const head = await out.embedFont(StandardFonts.HelveticaBold);
       for (const raw of src.split(/\r?\n/)) {
         const line = raw.trimEnd();
@@ -516,12 +539,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         else y -= size * .9;
       }
     } else if (mono) {
-      const rows = src.split(/\r?\n/).filter(Boolean).map(splitCsv);
-      const widths = (rows[0] || []).map((_, i) => Math.max(...rows.map(r => (r[i] ?? "").length)));
-      const grid = rows.map(r => r.map((c, i) => (c ?? "").padEnd(widths[i])).join("  "));
-      let sz = size;                    // Courier chars are exactly .6*size wide: shrink to fit
-      while (sz > 5 && Math.max(...grid.map(l => l.length)) * .6 * sz > W - 2 * M) sz--;
-      for (const line of grid) draw(line, body, sz, 0);
+      drawGrid(src.split(/\r?\n/).filter(Boolean).map(splitCsv));
     } else {
       for (const para of src.split(/\r?\n/)) {
         if (para.trim()) draw(para, body, size, 2);
@@ -548,7 +566,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
   root.StapleCore = Object.freeze({
     COPIES_RE, MAX_COPIES, copiesFromName, effCopies, clampCopies, shortName,
-    isAcceptedName, isImageName, isZipName, isTextName, pageKey, isRemoved, withRemoved, buildPlan, planSignature, rangeLabel,
+    isAcceptedName, isImageName, isZipName, isTextName, isSheetName, pageKey, isRemoved, withRemoved, buildPlan, planSignature, rangeLabel,
     sanitizeFilename, defaultFilename, moveItem, moveRelative, sortByName, isDuplicate,
     imageToPdf, sanitizeText, splitCsv, textToPdf, mergeBlocks,
   });
@@ -564,7 +582,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 const { PDFDocument, StandardFonts } = PDFLib;
 const { copiesFromName, effCopies, clampCopies, shortName, isAcceptedName, isImageName, isZipName,
   buildPlan, planSignature, rangeLabel, sanitizeFilename, defaultFilename, moveItem, moveRelative,
-  sortByName, isDuplicate, imageToPdf, mergeBlocks, withRemoved, isTextName, textToPdf } = StapleCore;
+  sortByName, isDuplicate, imageToPdf, mergeBlocks, withRemoved, isTextName, textToPdf, isSheetName } = StapleCore;
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 const PALETTE = ["#E0352B","#2B6FEB","#D98A00","#178F55","#8B3FD9","#D9437F","#0B93A6","#B5480C","#4F46E5","#5E8F0A","#9C2F6B","#0F766E"];
@@ -692,6 +710,13 @@ async function ingest(fileList) {
     } else if (isTextName(it.name)) {
       try { bytes = await textToPdf(PDFDocument, StandardFonts, new TextDecoder().decode(it.data), { csv: /\.csv$/i.test(it.name), md: /\.md$/i.test(it.name) }); }
       catch { toast(`Couldn’t read the text file ${it.name}.`, true); continue; }
+    } else if (isSheetName(it.name)) {
+      try {
+        if (!window.XLSX) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+        const wb = XLSX.read(new Uint8Array(it.data), { type: "array" });
+        const sheets = wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: "" }) }));
+        bytes = await textToPdf(PDFDocument, StandardFonts, "", { sheets });
+      } catch { toast(`Couldn’t read the spreadsheet ${it.name}.`, true); continue; }
     }
     const f = {
       id: uid(), name: it.name, size: it.data.byteLength, pages: 0,
@@ -1306,6 +1331,11 @@ async function idle() {
   throw new Error("build never settled");
 }
 window.Staple = { state, plan, AI, idle };
+
+/* ---------------- offline rescue ----------------
+   A service worker caches what was served once and answers from that cache only
+   when the network fails; online behaviour is identical to a browser without it. */
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("./sw.js").catch(() => {});
 
 /* ---------------- boot: restore from IndexedDB ---------------- */
 (async function boot() {

@@ -72,8 +72,8 @@ describe("file acceptance", () => {
     ["a.pdf", true], ["A.PDF", true], ["scan.jpg", true], ["scan.JPEG", true], ["scan.png", true],
     ["scan.webp", true], ["scan.WEBP", true], ["photo.gif", true], ["photo.bmp", true], ["photo.avif", true],
     ["Drive Folder/sub/a.pdf", true], ["Drive Folder\\a.pdf", true],
-    ["notes.txt", true], ["readme.md", true], ["grades.csv", true], ["scan.heic", true],
-    ["a.pdf.zip", false], ["doc.docx", false], ["sheet.xlsx", false], ["scan.tiff", false], ["a.pdfx", false],
+    ["notes.txt", true], ["readme.md", true], ["grades.csv", true], ["scan.heic", true], ["grades.xlsx", true],
+    ["a.pdf.zip", false], ["doc.docx", false], ["sheet.xls", false], ["scan.tiff", false], ["a.pdfx", false],
     ["__MACOSX/a.pdf", false], ["folder/__MACOSX/._a.pdf", false], [".hidden.pdf", false],
     ["folder/.secret/a.pdf", false], ["._a.pdf", false],
   ])("isAcceptedName(%s) -> %s", (n, ok) => expect(C.isAcceptedName(n)).toBe(ok));
@@ -97,6 +97,12 @@ describe("file acceptance", () => {
     expect(C.isTextName("grades.CSV")).toBe(true);
     expect(C.isTextName("notes.pdf")).toBe(false);
     expect(C.isTextName("notes.md.pdf")).toBe(false);
+  });
+
+  it("detects spreadsheets", () => {
+    expect(C.isSheetName("grades.XLSX")).toBe(true);
+    expect(C.isSheetName("grades.xls")).toBe(false);   // legacy binary formats stay refused
+    expect(C.isSheetName("grades.csv")).toBe(false);
   });
 
   it("treats same name + same size as a duplicate, and nothing else", () => {
@@ -337,6 +343,11 @@ describe("text files become PDFs", () => {
     const csv = 'Name,Score,Comment\nAlice,90,""excellent all round""\nBob,85,ok\n';
     const doc = await PDFDocument.load(await C.textToPdf(PDFDocument, StandardFonts, csv, { csv: true }));
     expect(doc.getPageCount()).toBe(1);
+  });
+  it("spreadsheet sheets render as titled mono grids", async () => {
+    const sheets = [{ name: "Grades", rows: [["Name", "Score"], ["Alice", "90"]] }, { name: "Notes", rows: [["just checking"]] }];
+    const doc = await PDFDocument.load(await C.textToPdf(PDFDocument, StandardFonts, "", { sheets }));
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
   });
 });
 

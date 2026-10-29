@@ -1,0 +1,14 @@
+{
+  "name": "Staple — one PDF to rule the paperwork",
+  "short_name": "Staple",
+  "description": "Merge PDFs (and repeat *_N_copies files) entirely in your browser. Nothing is uploaded.",
+  "start_url": "./staple.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F6F7FB",
+  "theme_color": "#2B2FD9",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

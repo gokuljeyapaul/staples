@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
+import * as XLSX from "xlsx";
 import { loadCore, html, file } from "../helpers/core.js";
 import { makePdf, readMarkers, readText, pageSizes, expectedMarkers, DRIVE_SET, DRIVE_SET_PAGES, PAGE_SIZES } from "../helpers/pdf.js";
 
@@ -170,6 +171,28 @@ describe("text files become PDFs", () => {
   });
 });
 
+describe("spreadsheets become PDFs", () => {
+  it("each sheet name and cell lands as selectable text", async () => {
+    const sheets = [{ name: "Grades", rows: [["Name", "Score"], ["Alice, Jr", "90"]] }, { name: "Notes", rows: [["just checking"]] }];
+    const text = (await readText(await C.textToPdf(PDFDocument, StandardFonts, "", { sheets }))).join(" ").replace(/\s+/g, " ");
+    expect(text).toContain("Grades");
+    expect(text).toContain("Alice, Jr");
+    expect(text).toContain("just checking");
+  });
+
+  it("a real workbook round-trips through the same path the app uses", async () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Name", "Score"], ["Alice", "90"], ["Bob, Jr", "85"]]), "Grades");
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const back = XLSX.read(buf, { type: "buffer" });
+    const sheets = back.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(back.Sheets[n], { header: 1, raw: false, defval: "" }) }));
+    const text = (await readText(await C.textToPdf(PDFDocument, StandardFonts, "", { sheets }))).join(" ").replace(/\s+/g, " ");
+    expect(text).toContain("Grades");
+    expect(text).toContain("Alice");
+    expect(text).toContain("Bob, Jr");
+  });
+});
+
 describe("assumptions the app relies on", () => {
   it("pdf-lib refuses locked PDFs with an error mentioning encryption (drives the 🔒 flatten path)", async () => {
     await expect(PDFDocument.load(fixture("Locked_Owner_Only.pdf"))).rejects.toThrow(/encrypt/i);
@@ -202,5 +225,9 @@ describe("assumptions the app relies on", () => {
 
   it("the lazily-fetched HEIC decoder is pinned to the tested version", () => {
     expect(html()).toContain(`heic2any/${pkg.devDependencies.heic2any}/heic2any.min.js`);
+  });
+
+  it("the lazily-fetched spreadsheet reader is pinned to the tested version", () => {
+    expect(html()).toContain(`xlsx/${pkg.devDependencies.xlsx}/xlsx.full.min.js`);
   });
 });

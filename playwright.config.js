@@ -17,6 +17,7 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4173",
     acceptDownloads: true,
+    serviceWorkers: "block",   // keep tests deterministic; the SW is an offline rescue, not under test
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video,

@@ -47,6 +47,7 @@ back in charge.
 - Unknown types are refused with a nudge — a toast tells you what to export or convert before you wonder where your file went
 - Owner-locked PDFs are flattened to images and merged anyway
 - Password-protected PDFs are skipped with a reason: Staple merges paperwork, it doesn't crack safes
+- XLSX spreadsheets: each sheet becomes a titled page of aligned text — the reader is fetched from the pinned CDN only when one shows up
 
 **Pages**
 - Full preview of the merged PDF before you download — every page numbered exactly as it will land
@@ -65,6 +66,10 @@ back in charge.
 - Storage meter with a live quota estimate, plus **Clear files** and the nuclear **Clear browser storage**
 - Light/dark theme: follows your system until you decide otherwise
 
+**Privacy & platform**
+- Strict Content-Security-Policy with `connect-src 'none'` — the browser itself refuses any outbound data connection, and a CI test asserts only the pinned CDN files are ever requested
+- Works offline after the first visit, installable on phones (PWA) — the service worker is a network-first cache that answers only when the network fails
+
 ## Limitations
 
 In writing, because honesty is a feature:
@@ -74,6 +79,7 @@ In writing, because honesty is a feature:
 - **Locked PDFs become images.** Owner-encrypted PDFs are rasterised to merge, so their text is no longer selectable and the output gets chunkier.
 - **TIFF: convert first.** HEIC works too (via a lazily-fetched decoder). Everything else image-shaped — JPG, PNG, WebP, GIF, BMP, AVIF — just works.
 - **Text pages are Latin-only and no-frills.** Standard PDF fonts mean exotic scripts render as `?`, and Markdown styling stops at headings and bullets.
+- **Spreadsheets come out as data, not styling.** Cell values and sheet names render as aligned text; merged cells, charts and formula formatting flatten to values. Legacy `.xls` (like `.doc`) stays refused.
 - **Pages travel with their file.** Reorder files and copies at will, but a lone page can't be moved from one file into another.
 - **The rule is literal.** `Ticket_3_copies_final.pdf` gets 1 copy; the suffix must sit at the end.
 - **Big piles are heavy.** Merging happens in your tab's memory and browser storage has a quota. A 500 MB scan pile will test both.

@@ -4,6 +4,22 @@ import { expectedMarkers, DRIVE_SET, DRIVE_SET_PAGES } from "../helpers/pdf.js";
 const DRIVE_NAMES = DRIVE_SET.map(([n]) => n);
 const uploadDrive = async app => { await app.upload(...DRIVE_NAMES); await expect(app.files()).toHaveCount(DRIVE_NAMES.length); };
 
+test.describe("privacy guarantees", () => {
+  test("nothing phones home: requests never leave this page, the pinned CDN and Google Fonts", async ({ page }) => {
+    const hosts = new Set();
+    page.on("request", r => hosts.add(new URL(r.url()).hostname));
+    await page.goto("/staple.html");
+    await page.waitForFunction(() => window.Staple && window.StapleCore);
+    await page.setInputFiles("#fileInput", gen("Transcript.pdf"));
+    await page.waitForFunction(() => window.Staple.idle());
+    // The property that matters: no request ever reaches a host outside the allowlist.
+    // (The font file host only appears when the stylesheet loads - REAL_CDN mode.)
+    const allow = new Set(["127.0.0.1", "cdnjs.cloudflare.com", "fonts.googleapis.com", "fonts.gstatic.com"]);
+    expect([...hosts].filter(h => !allow.has(h))).toEqual([]);
+    expect(hosts.has("cdnjs.cloudflare.com")).toBe(true);
+  });
+});
+
 test.describe("empty state", () => {
   test("invites a drop and disables download @mobile", async ({ app, page }) => {
     await expect(page.locator("#empty")).toBeVisible();
@@ -247,6 +263,14 @@ test.describe("input formats", () => {
     await app.upload("Scan_Heic.heic");
     await expect(app.files()).toHaveCount(1);
     expect(await app.idle()).toBe(1);
+  });
+
+  test("an XLSX spreadsheet becomes a titled text page", async ({ app }) => {
+    await app.upload("Grades.xlsx");
+    await expect(app.files()).toHaveCount(1);
+    expect(await app.idle()).toBe(1);
+    const { markers } = await app.download();
+    expect(markers).toEqual([""]);
   });
 
   test("unsupported types are refused with a helpful nudge", async ({ app, page }) => {

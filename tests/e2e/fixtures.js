@@ -12,6 +12,7 @@ const CDN = {
   "pdf.js/3.11.174/pdf.worker.min.js": nm("pdfjs-dist/build/pdf.worker.min.js"),
   "jszip/3.10.1/jszip.min.js": nm("jszip/dist/jszip.min.js"),
   "heic2any/0.0.4/heic2any.min.js": nm("heic2any/dist/heic2any.min.js"),
+  "xlsx/0.18.5/xlsx.full.min.js": nm("xlsx/dist/xlsx.full.min.js"),
 };
 export const GEN = fileURLToPath(new URL("../.generated/", import.meta.url));
 export const gen = (...names) => names.map(n => GEN + n);
@@ -20,6 +21,10 @@ export const test = base.extend({
   page: async ({ page }, use) => {
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
+    page.on("console", m => {
+      // A CSP violation means the page broke one of its own guarantees; fail loudly.
+      if (m.type() === "error" && /Content Security Policy|Refused to/i.test(m.text())) errors.push("CSP violation: " + m.text());
+    });
     if (!process.env.REAL_CDN) {
       await page.route(/^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/(.+)$/, async route => {
         const key = route.request().url().split("/ajax/libs/")[1];

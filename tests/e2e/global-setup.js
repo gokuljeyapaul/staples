@@ -2,6 +2,7 @@
 import { mkdir, writeFile, copyFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import JSZip from "jszip";
+import * as XLSX from "xlsx";
 import { makePdf, DRIVE_SET } from "../helpers/pdf.js";
 
 export const GEN = fileURLToPath(new URL("../.generated/", import.meta.url));
@@ -16,6 +17,9 @@ export default async function globalSetup() {
   await writeFile(GEN + "Notes.txt", "Plain text notes.\nSecond line with enough words to wrap around the page once or twice.\n");
   await writeFile(GEN + "Syllabus.md", "# Course Outline\n\n## Week 1\n\n- Read chapter one\n- Do the **exercises**\n\nA short paragraph about grading.\n");
   await writeFile(GEN + "Grades.csv", "Name,Score\nAlice,90\nBob,85\n");
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Name", "Score"], ["Alice", 90], ["Bob", 85]]), "Grades");
+  await writeFile(GEN + "Grades.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
   for (const f of ["Locked_Owner_Only.pdf", "Password_Required.pdf", "Passport_Scan.png", "Visa_Scan.jpg",
     "Scan_Webp.webp", "Scan_Gif.gif", "Scan_Bmp.bmp", "Scan_Heic.heic"]) await copyFile(FIX + f, GEN + f);
 
