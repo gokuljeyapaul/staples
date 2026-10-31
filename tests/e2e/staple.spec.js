@@ -7,7 +7,11 @@ const uploadDrive = async app => { await app.upload(...DRIVE_NAMES); await expec
 test.describe("privacy guarantees", () => {
   test("nothing phones home: requests never leave this page, the pinned CDN and Google Fonts", async ({ page }) => {
     const hosts = new Set();
-    page.on("request", r => hosts.add(new URL(r.url()).hostname));
+    page.on("request", r => {
+      // about:/data: requests (WebKit emits one for the initial about:blank) never touch the network.
+      const u = new URL(r.url());
+      if (u.protocol === "http:" || u.protocol === "https:") hosts.add(u.hostname);
+    });
     await page.goto("/staple.html");
     await page.waitForFunction(() => window.Staple && window.StapleCore);
     await page.setInputFiles("#fileInput", gen("Transcript.pdf"));
