@@ -230,4 +230,11 @@ describe("assumptions the app relies on", () => {
   it("the lazily-fetched spreadsheet reader is pinned to the tested version", () => {
     expect(html()).toContain(`xlsx/${pkg.devDependencies.xlsx}/xlsx.full.min.js`);
   });
+
+  it("links.html scripts are pinned to exact versions too", () => {
+    const h = readFileSync(fileURLToPath(new URL("../../links.html", import.meta.url)), "utf8");
+    const srcs = [...h.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
+    expect(srcs.length).toBe(3);
+    for (const s of srcs) expect(s).toMatch(/^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/[\w.-]+\/\d+\.\d+\.\d+\//);
+  });
 });

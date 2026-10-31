@@ -48,6 +48,7 @@ back in charge.
 - Owner-locked PDFs are flattened to images and merged anyway
 - Password-protected PDFs are skipped with a reason: Staple merges paperwork, it doesn't crack safes
 - XLSX spreadsheets: each sheet becomes a titled page of aligned text — the reader is fetched from the pinned CDN only when one shows up
+- Fetch from web links: paste direct https URLs (one per line, optional trailing number = copies) on the [links page](https://gokuljeyapaul.github.io/staples/links.html) — fetched in your browser into the same local pile, with the `*_N_copies` rule read from the URL's filename
 
 **Pages**
 - Full preview of the merged PDF before you download — every page numbered exactly as it will land
@@ -80,6 +81,7 @@ In writing, because honesty is a feature:
 - **TIFF: convert first.** HEIC works too (via a lazily-fetched decoder). Everything else image-shaped — JPG, PNG, WebP, GIF, BMP, AVIF — just works.
 - **Text pages are Latin-only and no-frills.** Standard PDF fonts mean exotic scripts render as `?`, and Markdown styling stops at headings and bullets.
 - **Spreadsheets come out as data, not styling.** Cell values and sheet names render as aligned text; merged cells, charts and formula formatting flatten to values. Legacy `.xls` (like `.doc`) stays refused.
+- **URL fetching depends on the host playing along.** Browsers only let a page fetch from hosts that allow cross-origin downloads (CORS); a host that refuses gets told on, and save-and-drop still always works.
 - **Pages travel with their file.** Reorder files and copies at will, but a lone page can't be moved from one file into another.
 - **The rule is literal.** `Ticket_3_copies_final.pdf` gets 1 copy; the suffix must sit at the end.
 - **Big piles are heavy.** Merging happens in your tab's memory and browser storage has a quota. A 500 MB scan pile will test both.

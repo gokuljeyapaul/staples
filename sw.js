@@ -2,9 +2,9 @@
    While online, behaviour is byte-for-byte identical to a browser without this
    file — every request goes to the network and the successful copy is cached.
    When the network fails, the last served copy answers instead. */
-const CACHE = "staple-v1";
+const CACHE = "staple-v2";
 const ASSETS = [
-  "./", "./staple.html", "./privacy.html", "./manifest.webmanifest", "./icon.svg", "./icon-512.png",
+  "./", "./staple.html", "./privacy.html", "./links.html", "./manifest.webmanifest", "./icon.svg", "./icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",

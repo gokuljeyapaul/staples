@@ -1,4 +1,4 @@
-import { test, expect, gen } from "./fixtures.js";
+import { test, expect, gen, App } from "./fixtures.js";
 import { expectedMarkers, DRIVE_SET, DRIVE_SET_PAGES } from "../helpers/pdf.js";
 
 const DRIVE_NAMES = DRIVE_SET.map(([n]) => n);
@@ -21,6 +21,35 @@ test.describe("privacy guarantees", () => {
     const allow = new Set(["127.0.0.1", "cdnjs.cloudflare.com", "fonts.googleapis.com", "fonts.gstatic.com"]);
     expect([...hosts].filter(h => !allow.has(h))).toEqual([]);
     expect(hosts.has("cdnjs.cloudflare.com")).toBe(true);
+  });
+});
+
+test.describe("add from web links", () => {
+  test("pasted links fetch into the pile, with name-rule and explicit copies", async ({ page }) => {
+    // A host that refuses the download (route.fulfill bypasses Chromium's CORS check,
+    // so abort instead - the fetch fails the same way a CORS rejection does).
+    await page.route("https://blocked.example/Refused.pdf", route => route.abort());
+    await page.goto("/links.html");
+    await page.fill("#urls", [
+      "http://127.0.0.1:4173/tests/.generated/Ticket_3_Copies.pdf",
+      "http://127.0.0.1:4173/tests/.generated/Transcript.pdf 2",
+      "https://blocked.example/Refused.pdf",
+    ].join("\n"));
+    await page.click("#fetchBtn");
+    await expect(page.locator("#results .result")).toHaveCount(3);
+    await expect(page.locator("#results .result").nth(0)).toContainText("×3 from name");
+    await expect(page.locator("#results .result").nth(1)).toContainText("your call ×2");
+    await expect(page.locator("#results .result").nth(2)).toContainText("refuse browser downloads");
+    await expect(page.locator("#status")).toContainText("Added 2 files to your pile");
+
+    // Same origin, same IndexedDB: open the app and the fetched files are in the pile.
+    const app = new App(page);
+    await page.goto("/staple.html");
+    await page.waitForFunction(() => window.Staple && window.StapleCore);
+    await expect(page.locator("#fileList .file")).toHaveCount(2);
+    expect(await app.idle()).toBe(2 * 3 + 1 * 2);
+    const { markers } = await app.download();
+    expect(markers).toEqual(expectedMarkers([["Ticket_3_Copies.pdf", 2, 3], ["Transcript.pdf", 1, 2]]));
   });
 });
 

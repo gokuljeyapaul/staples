@@ -122,8 +122,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .x{width:28px;height:28px;border:0;background:none;color:var(--ink-soft);border-radius:8px;font-size:16px}
 .x:hover{background:#FFE4E1;color:var(--danger)}
 .storage{margin-top:auto;font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px}
-.privacy-link{color:var(--ink-soft);text-decoration:underline;text-decoration-color:var(--stamp);text-underline-offset:3px}
+.privacy-link{display:inline-flex;align-items:center;height:42px;padding:0 8px;font-size:13px;font-weight:700;color:var(--ink-soft);text-decoration:underline;text-decoration-color:var(--stamp);text-underline-offset:4px;white-space:nowrap}
 .privacy-link:hover{color:var(--stamp)}
+.orlinks{margin:10px 0 0;font-size:12.5px;color:var(--ink-soft)}
+.orlinks a{color:var(--stamp);font-weight:700}
 .meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
 .meter i{display:block;height:100%;background:var(--stamp);width:0;transition:width .4s}
 
@@ -246,6 +248,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <button class="btn icon" id="themeBtn" aria-label="Switch light / dark" title="Following your system. Click to switch.">
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
     </button>
+    <a class="privacy-link" href="privacy.html" title="What Staple stores, what it can’t, and how much it can handle">Privacy</a>
   </div>
 </header>
 
@@ -258,7 +261,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         <button class="btn small" id="pickFiles">Pick files</button>
         <button class="btn small" id="pickFolder">Pick folder</button>
       </div>
-      <input type="file" id="fileInput" class="sr" multiple accept=".pdf,.zip,.jpg,.jpeg,.png,application/pdf,application/zip,image/jpeg,image/png">
+      <p class="orlinks">…or <a href="links.html">paste web links</a> — fetched in your browser, straight into the pile.</p>
+      <input type="file" id="fileInput" class="sr" multiple accept=".pdf,.zip,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.heic,.txt,.md,.csv,.xlsx,application/pdf,application/zip,image/jpeg,image/png">
       <input type="file" id="folderInput" class="sr" webkitdirectory multiple>
     </div>
     <div class="qhead"><h2>The pile</h2><span id="qcount">empty</span></div>
@@ -274,7 +278,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       </div>
       <div id="storageText">Stored only in this browser.</div>
       <div class="meter"><i id="meter"></i></div>
-      <a class="privacy-link" href="privacy.html">Privacy &amp; limits — how much this can handle</a>
     </div>
   </aside>
 

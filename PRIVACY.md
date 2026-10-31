@@ -40,6 +40,11 @@ Two more guarantees, both machine-checked:
 - **It works offline.** After the first visit a network-first service worker
   answers from its cache only when the network fails. Online behaviour is
   identical to a browser without it, and it never sends anything.
+- **The links page is the one deliberate exception.** `links.html` fetches only
+  the https URLs you paste — those hosts see your IP, as with any download.
+  The fetched documents still land in the same local IndexedDB as dropped
+  files and never leave your device; the main app keeps its stricter
+  `connect-src 'none'`.
 
 ## Where your data lives
 
