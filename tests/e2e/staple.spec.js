@@ -365,6 +365,7 @@ test.describe("download", () => {
     await app.upload("Transcript.pdf");
     await app.idle();
     await page.fill("#fname", "Trip: docs/pack");
+    await app.idle();   // let the fill's debounced rebuild settle before clicking download
     expect((await app.download()).name).toBe("Trip_ docs_pack.pdf");
   });
 

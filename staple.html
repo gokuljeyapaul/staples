@@ -1187,7 +1187,9 @@ const currentFilename = () => sanitizeFilename($("#fname").value, defaultFilenam
 const downloadsCap = (window.claude && typeof window.claude.use === "function") ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
 async function download() {
   clearTimeout(buildTimer);
-  if (!state.merged || state.building || state.merged.sig !== planSignature(plan())) { buildPromise = build(); await buildPromise; }
+  // Never start a second build while one is in flight: await it, then rebuild only if stale.
+  if (state.building) await buildPromise;
+  if (!state.merged || state.merged.sig !== planSignature(plan())) { buildPromise = build(); await buildPromise; }
   if (!state.merged) return toast(plan().pages.length ? "Every page is in the trash. Restore some first." : "Nothing to download yet.", true);
   const name = currentFilename();
   const blob = new Blob([state.merged.bytes], { type: "application/pdf" });
