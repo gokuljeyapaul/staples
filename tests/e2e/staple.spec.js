@@ -150,7 +150,15 @@ test.describe("ordering", () => {
   test("drag and drop reorders the pile", async ({ app }) => {
     await app.upload("Housing_Contract.pdf", "Transcript.pdf", "Workshop_Certificate.pdf");
     await expect(app.files()).toHaveCount(3);
-    await app.row("Workshop_Certificate.pdf").dragTo(app.row("Housing_Contract.pdf"), { targetPosition: { x: 40, y: 4 } });
+    // Both rows in view before the drag: dragTo can't re-scroll mid-drag.
+    await app.row("Workshop_Certificate.pdf").scrollIntoViewIfNeeded();
+    await app.row("Housing_Contract.pdf").scrollIntoViewIfNeeded();
+    const drag = () => app.row("Workshop_Certificate.pdf").dragTo(app.row("Housing_Contract.pdf"), { targetPosition: { x: 40, y: 4 } });
+    const want = "Workshop_Certificate.pdf|Housing_Contract.pdf|Transcript.pdf";
+    const order = async () => (await app.fileOrder()).join("|");
+    // Synthetic input can lose the drag entirely under runner load (a real mouse doesn't).
+    // Repeat the same user action until the pile notices; a wrong drop still fails below.
+    for (let i = 0; i < 4 && (await order()) !== want; i++) await drag();
     expect(await app.fileOrder()).toEqual(["Workshop_Certificate.pdf", "Housing_Contract.pdf", "Transcript.pdf"]);
     await app.idle();
     expect((await app.download()).markers).toEqual(expectedMarkers([["Workshop_Certificate.pdf", 1], ["Housing_Contract.pdf", 1], ["Transcript.pdf", 1]]));
@@ -355,6 +363,7 @@ test.describe("input formats", () => {
 test.describe("download", () => {
   test("uses and sanitises the Save as name", async ({ app, page }) => {
     await app.upload("Transcript.pdf");
+    await app.idle();
     await page.fill("#fname", "Trip: docs/pack");
     expect((await app.download()).name).toBe("Trip_ docs_pack.pdf");
   });

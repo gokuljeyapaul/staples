@@ -896,7 +896,7 @@ function renderQueue() {
       title: f.error || f.name,
       ondragstart: e => { dragId = f.id; li.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", f.id); },
       ondragend: () => { dragId = null; li.classList.remove("dragging"); clearDropMarks(); },
-      ondragover: e => { if (!dragId || dragId === f.id) return; e.preventDefault(); e.stopPropagation(); const after = e.offsetY > li.offsetHeight / 2; clearDropMarks(); li.classList.add(after ? "drop-after" : "drop-before"); },
+      ondragover: e => { if (!dragId || dragId === f.id) return; e.preventDefault(); e.stopPropagation(); const r = li.getBoundingClientRect(); const after = e.clientY > r.top + r.height / 2; clearDropMarks(); li.classList.add(after ? "drop-after" : "drop-before"); },
       ondrop: e => { if (!dragId) return; e.preventDefault(); e.stopPropagation(); const after = li.classList.contains("drop-after"); clearDropMarks(); moveTo(dragId, f.id, after); },
       onclick: e => { if (e.target.closest("button")) return; focusFile(f.id); },
     },
