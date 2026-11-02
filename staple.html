@@ -1286,7 +1286,6 @@ async function walkEntries(entries) {
 $("#dlBtn").onclick = download;
 $("#fname").value = (() => { try { return localStorage.getItem("staple-fname"); } catch { return null; } })() || defaultFilename();
 $("#fname").addEventListener("input", () => { try { localStorage.setItem("staple-fname", $("#fname").value); } catch {} });
-$("#fname").addEventListener("change", scheduleBuild);
 
 $("#sortBtn").onclick = sortAZ;
 $("#resetBtn").onclick = resetCopies;
