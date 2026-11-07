@@ -40,11 +40,11 @@ Two more guarantees, both machine-checked:
 - **It works offline.** After the first visit a network-first service worker
   answers from its cache only when the network fails. Online behaviour is
   identical to a browser without it, and it never sends anything.
-- **The links page is the one deliberate exception.** `links.html` fetches only
-  the https URLs you paste — those hosts see your IP, as with any download.
-  The fetched documents still land in the same local IndexedDB as dropped
-  files and never leave your device; the main app keeps its stricter
-  `connect-src 'none'`.
+- **URL fetching uses a sandboxed iframe.** When you paste a web link, the app
+  creates an ephemeral `<iframe sandbox="allow-scripts">` — its own opaque origin,
+  unable to touch this page's DOM, IndexedDB, or cookies. It fetches only the URL
+  you pasted, sends the bytes back via `postMessage`, and is destroyed. The main
+  page's strict `connect-src 'none'` remains in force at all times.
 
 ## Where your data lives
 

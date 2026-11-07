@@ -7,10 +7,13 @@
 <meta name="theme-color" content="#2B2FD9">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'none'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; media-src 'none'; worker-src 'self' blob:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'none'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src blob:; media-src 'none'; worker-src 'self' blob:">
 <!-- CSP notes: 'unsafe-eval' is needed by the HEIC decoder's WASM glue, 'blob:' workers by
-     its internal worker. Connections stay forbidden (connect-src 'none'), so even eval'd
-     code cannot send a byte anywhere. Sources are pinned to this file and cdnjs. -->
+     its internal worker, and 'blob:' frames by the sandboxed URL fetcher. The sandboxed
+     iframe has its own opaque origin — it cannot touch this page's DOM, IndexedDB, or
+     cookies — and is destroyed after each fetch. Connections stay forbidden
+     (connect-src 'none') on this page, so even eval'd code cannot send a byte anywhere
+     directly. Sources are pinned to this file and cdnjs. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
@@ -126,6 +129,14 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .privacy-link:hover{color:var(--stamp)}
 .orlinks{margin:10px 0 0;font-size:12.5px;color:var(--ink-soft)}
 .orlinks a{color:var(--stamp);font-weight:700}
+#linksPanel{display:flex;flex-direction:column;gap:8px;margin-top:8px;text-align:left}
+.linkRow{display:flex;gap:6px;align-items:center}
+.linkRow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12.5px;background:var(--card);color:var(--ink);outline:none}
+.linkRow input:focus{border-color:var(--ink)}
+.linkRemove{flex:none;width:26px;height:26px;border:1.5px solid var(--danger);background:none;color:var(--danger);border-radius:7px;font-size:14px;display:grid;place-items:center;padding:0;cursor:pointer}
+.linkRemove:hover{background:var(--danger);color:#fff}
+.linksStatus{font-size:12.5px;color:var(--ink-soft);min-height:1.4em}
+.linksStatus.err{color:var(--danger)}
 .meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
 .meter i{display:block;height:100%;background:var(--stamp);width:0;transition:width .4s}
 
@@ -261,7 +272,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         <button class="btn small" id="pickFiles">Pick files</button>
         <button class="btn small" id="pickFolder">Pick folder</button>
       </div>
-      <p class="orlinks">…or <a href="links.html">paste web links</a> — fetched in your browser, straight into the pile.</p>
+      <p class="orlinks">…or paste web links:</p>
+      <div class="row"><button class="btn small" id="linksToggle">Paste web links</button></div>
+      <div id="linksPanel" hidden>
+        <div id="linkRows"></div>
+        <div class="row">
+          <button class="btn small" id="addLinkBtn">+ Add another</button>
+          <button class="btn small primary" id="fetchLinksBtn">Fetch and add to the pile</button>
+        </div>
+        <div class="linksStatus" id="linksStatus" role="status" aria-live="polite" hidden></div>
+      </div>
       <input type="file" id="fileInput" class="sr" multiple accept=".pdf,.zip,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.heic,.txt,.md,.csv,.xlsx,application/pdf,application/zip,image/jpeg,image/png">
       <input type="file" id="folderInput" class="sr" webkitdirectory multiple>
     </div>
@@ -1251,6 +1271,80 @@ function toggleTheme() {
   applyTheme(cur === "dark" ? "light" : "dark");
 }
 
+/* ---------------- web links (sandboxed iframe fetch) ----------------
+   The main page's CSP (connect-src 'none') blocks direct fetches. Each URL is fetched
+   via an ephemeral <iframe sandbox="allow-scripts" src="blob:…"> — its own opaque
+   origin, so it can fetch but cannot touch this page's DOM, IndexedDB, or cookies.
+   Bytes come back via postMessage only; the iframe is destroyed after each fetch. */
+function fetchViaSandbox(url) {
+  return new Promise((resolve, reject) => {
+    const id = "sf" + (++sandId);
+    const html = `<!doctype html><script>
+      fetch(${JSON.stringify(url)})
+        .then(async r => {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const buf = await r.arrayBuffer();
+          parent.postMessage({ id: ${JSON.stringify(id)}, ok: true, buf }, "*");
+        })
+        .catch(e => parent.postMessage({ id: ${JSON.stringify(id)}, ok: false, err: String(e) }, "*"));
+    <\/script>`;
+    const frame = el("iframe", { sandbox: "allow-scripts", style: "display:none", src: URL.createObjectURL(new Blob([html], { type: "text/html" })) });
+    const cleanup = () => { clearTimeout(timer); URL.revokeObjectURL(frame.src); frame.remove(); };
+    const timer = setTimeout(() => { cleanup(); reject(new Error("fetch timed out")); }, 30000);
+    const handler = e => {
+      if (e.source !== frame.contentWindow || !e.data || e.data.id !== id) return;
+      cleanup(); window.removeEventListener("message", handler);
+      e.data.ok ? resolve(e.data.buf) : reject(new Error(e.data.err || "fetch failed"));
+    };
+    window.addEventListener("message", handler);
+    document.body.append(frame);
+  });
+}
+let sandId = 0;
+
+function addLinkRow(url = "") {
+  const row = el("div", { class: "linkRow" },
+    el("input", { type: "url", placeholder: "https://portal.example/document.pdf", value: url,
+      "aria-label": "Web link to a PDF", spellcheck: "false" }),
+    el("button", { class: "linkRemove", "aria-label": "Remove this link", title: "Remove",
+      onclick: () => { row.remove(); if (!$("#linkRows").children.length) toggleLinks(false); } }, "×"));
+  $("#linkRows").append(row);
+  row.querySelector("input").focus();
+}
+
+function toggleLinks(show) {
+  $("#linksPanel").hidden = !show;
+  if (show && !$("#linkRows").children.length) addLinkRow();
+  if (!show) { $("#linksStatus").hidden = true; }
+}
+
+function showLinkStatus(msg, err = false) {
+  const s = $("#linksStatus");
+  s.textContent = msg; s.classList.toggle("err", err); s.hidden = false;
+}
+
+async function fetchLinks() {
+  const urls = [...document.querySelectorAll(".linkRow input")].map(i => i.value.trim()).filter(Boolean);
+  if (!urls.length) { showLinkStatus("Paste at least one link.", true); return; }
+  let added = 0;
+  for (let i = 0; i < urls.length; i++) {
+    showLinkStatus(`Fetching ${i + 1} of ${urls.length}…`);
+    try {
+      const buf = await fetchViaSandbox(urls[i]);
+      let name;
+      try { name = decodeURIComponent(new URL(urls[i]).pathname.split("/").filter(Boolean).pop() || "document.pdf"); }
+      catch { name = "document.pdf"; }
+      if (!/\.[a-z0-9]{2,6}$/i.test(name)) name += ".pdf";
+      await ingest([{ name, webkitRelativePath: name, arrayBuffer: async () => buf }]);
+      added++;
+    } catch (e) {
+      showLinkStatus(`Couldn’t fetch: ${e.message || e}. The host may refuse browser downloads (CORS) or the link may be wrong — save the file and drop it instead.`, true);
+      return;
+    }
+  }
+  showLinkStatus(`Added ${added} file${added > 1 ? "s" : ""} to the pile.`);
+}
+
 /* ---------------- wiring ---------------- */
 $("#pickFiles").onclick = () => $("#fileInput").click();
 $("#pickFolder").onclick = () => $("#folderInput").click();
@@ -1292,6 +1386,10 @@ $("#resetBtn").onclick = resetCopies;
 $("#themeBtn").onclick = toggleTheme;
 $("#clearFilesBtn").onclick = clearFiles;
 $("#clearStorageBtn").onclick = clearStorage;
+
+$("#linksToggle").onclick = () => toggleLinks($("#linksPanel").hidden);
+$("#addLinkBtn").onclick = () => addLinkRow();
+$("#fetchLinksBtn").onclick = fetchLinks;
 
 new ResizeObserver(() => document.documentElement.style.setProperty("--top-h", $(".top").offsetHeight + "px")).observe($(".top"));
 $("#scrim").onclick = closeInspector;

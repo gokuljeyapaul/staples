@@ -48,7 +48,7 @@ back in charge.
 - Owner-locked PDFs are flattened to images and merged anyway
 - Password-protected PDFs are skipped with a reason: Staple merges paperwork, it doesn't crack safes
 - XLSX spreadsheets: each sheet becomes a titled page of aligned text — the reader is fetched from the pinned CDN only when one shows up
-- Fetch from web links: paste direct https URLs (one per line, optional trailing number = copies) on the [links page](https://gokuljeyapaul.github.io/staples/links.html) — fetched in your browser into the same local pile, with the `*_N_copies` rule read from the URL's filename
+- Fetch from web links: paste direct https URLs inline (click "Paste web links", add rows, fetch) — fetched via a sandboxed, ephemeral iframe that can't touch the page's data, into the same local pile, with the `*_N_copies` rule read from the URL's filename
 
 **Pages**
 - Full preview of the merged PDF before you download — every page numbered exactly as it will land

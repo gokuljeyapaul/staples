@@ -13,6 +13,7 @@ createServer(async (req, res) => {
   if (path.includes("..")) { res.writeHead(403).end(); return; }
   try {
     const body = await readFile(join(root, path || "staple.html"));
-    res.writeHead(200, { "content-type": types[extname(path)] || "application/octet-stream", "cache-control": "no-store" }).end(body);
+    res.writeHead(200, { "content-type": types[extname(path)] || "application/octet-stream", "cache-control": "no-store",
+      "access-control-allow-origin": "*" }).end(body);   // sandboxed-iframe fetches need CORS
   } catch { res.writeHead(404).end("not found"); }
 }).listen(port, "127.0.0.1", () => console.log(`Staple on http://127.0.0.1:${port}/staple.html`));

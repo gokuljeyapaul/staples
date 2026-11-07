@@ -25,31 +25,42 @@ test.describe("privacy guarantees", () => {
 });
 
 test.describe("add from web links", () => {
-  test("pasted links fetch into the pile, with name-rule and explicit copies", async ({ page }) => {
-    // A host that refuses the download (route.fulfill bypasses Chromium's CORS check,
-    // so abort instead - the fetch fails the same way a CORS rejection does).
-    await page.route("https://blocked.example/Refused.pdf", route => route.abort());
-    await page.goto("/links.html");
-    await page.fill("#urls", [
-      "http://127.0.0.1:4173/tests/.generated/Ticket_3_Copies.pdf",
-      "http://127.0.0.1:4173/tests/.generated/Transcript.pdf 2",
-      "https://blocked.example/Refused.pdf",
-    ].join("\n"));
-    await page.click("#fetchBtn");
-    await expect(page.locator("#results .result")).toHaveCount(3);
-    await expect(page.locator("#results .result").nth(0)).toContainText("×3 from name");
-    await expect(page.locator("#results .result").nth(1)).toContainText("your call ×2");
-    await expect(page.locator("#results .result").nth(2)).toContainText("refuse browser downloads");
-    await expect(page.locator("#status")).toContainText("Added 2 files to your pile");
-
-    // Same origin, same IndexedDB: open the app and the fetched files are in the pile.
-    const app = new App(page);
+  test("inline: pasted links fetch into the pile via the sandboxed iframe, same page", async ({ page }) => {
     await page.goto("/staple.html");
     await page.waitForFunction(() => window.Staple && window.StapleCore);
+    await page.click("#linksToggle");
+    await page.fill(".linkRow input", "http://127.0.0.1:4173/tests/.generated/Ticket_3_Copies.pdf");
+    await page.click("#fetchLinksBtn");
+    await expect(page.locator("#fileList .file")).toHaveCount(1);
+    await expect(page.locator("#fileList .file .name b")).toHaveText("Ticket_3_Copies.pdf");
+    await expect(page.locator(".chip.auto")).toHaveText("×3 from name");
+    expect(await page.evaluate(() => window.Staple.idle())).toBe(6);   // 2 pages × 3 copies
+    const { markers } = await new App(page).download();
+    expect(markers).toEqual(expectedMarkers([["Ticket_3_Copies.pdf", 2, 3]]));
+  });
+
+  test("inline: multiple links fetch sequentially, each landing in the pile", async ({ page }) => {
+    await page.goto("/staple.html");
+    await page.waitForFunction(() => window.Staple && window.StapleCore);
+    await page.click("#linksToggle");
+    await page.fill(".linkRow input", "http://127.0.0.1:4173/tests/.generated/Transcript.pdf");
+    await page.click("#addLinkBtn");
+    await page.fill(".linkRow:nth-child(2) input", "http://127.0.0.1:4173/tests/.generated/Housing_Contract.pdf");
+    await page.click("#fetchLinksBtn");
     await expect(page.locator("#fileList .file")).toHaveCount(2);
-    expect(await app.idle()).toBe(2 * 3 + 1 * 2);
-    const { markers } = await app.download();
-    expect(markers).toEqual(expectedMarkers([["Ticket_3_Copies.pdf", 2, 3], ["Transcript.pdf", 1, 2]]));
+    expect(await page.evaluate(() => window.Staple.idle())).toBe(2);
+  });
+
+  test("inline: a refused host shows a helpful error, not a silent failure", async ({ page }) => {
+    await page.route("https://blocked.example/Refused.pdf", route => route.abort());
+    await page.goto("/staple.html");
+    await page.waitForFunction(() => window.Staple && window.StapleCore);
+    await page.click("#linksToggle");
+    await page.fill(".linkRow input", "https://blocked.example/Refused.pdf");
+    await page.click("#fetchLinksBtn");
+    await expect(page.locator("#linksStatus")).toContainText("Couldn’t fetch");
+    await expect(page.locator("#linksStatus")).toContainText("save the file and drop it");
+    await expect(page.locator("#fileList .file")).toHaveCount(0);
   });
 });
 
