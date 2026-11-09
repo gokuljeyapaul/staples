@@ -7,13 +7,12 @@
 <meta name="theme-color" content="#2B2FD9">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'none'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src blob:; media-src 'none'; worker-src 'self' blob:">
-<!-- CSP notes: 'unsafe-eval' is needed by the HEIC decoder's WASM glue, 'blob:' workers by
-     its internal worker, and 'blob:' frames by the sandboxed URL fetcher. The sandboxed
-     iframe has its own opaque origin — it cannot touch this page's DOM, IndexedDB, or
-     cookies — and is destroyed after each fetch. Connections stay forbidden
-     (connect-src 'none') on this page, so even eval'd code cannot send a byte anywhere
-     directly. Sources are pinned to this file and cdnjs. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src https: http:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; media-src 'none'; worker-src 'self' blob:">
+<!-- CSP notes: connect-src allows fetching from URLs the user pastes (the web-links feature)
+     plus http: for local/test servers (mixed content blocks http in production). Every CDN
+     script carries a Sub-resource Integrity hash (integrity=...) so a compromised CDN
+     serving different code is browser-blocked. 'unsafe-eval' is needed by the HEIC
+     decoder's WASM glue. Sources are pinned to this file and cdnjs. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
@@ -352,11 +351,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
 <!-- Loading the worker as a plain script lets pdf.js run on the main thread, no Worker needed -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" integrity="sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
 <script id="staple-core">
 /* =====================================================================
    StapleCore: pure, DOM-free logic. The test suite loads this exact
@@ -668,10 +667,17 @@ async function saveAllMeta() {
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 const loaded = {};   // url -> Promise, so lazily-fetched libraries load once
+const SRI = {   // Sub-resource Integrity: a compromised CDN serving different code is browser-blocked
+  "https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js":
+    "sha384-OTofQ0MEeiSgh62havBcemCIK0gqj809wX6UA0uPISNMRnR6NZyCdGzX3SbLrgwL",
+  "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js":
+    "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw",
+};
 function loadScript(src) {
   return loaded[src] || (loaded[src] = new Promise((res, rej) => {
     const s = document.createElement("script");
     s.src = src; s.onload = res;
+    if (SRI[src]) { s.integrity = SRI[src]; s.crossOrigin = "anonymous"; }
     s.onerror = () => { delete loaded[src]; rej(new Error("couldn’t load " + src)); };
     document.head.append(s);
   }));
@@ -1271,37 +1277,9 @@ function toggleTheme() {
   applyTheme(cur === "dark" ? "light" : "dark");
 }
 
-/* ---------------- web links (sandboxed iframe fetch) ----------------
-   The main page's CSP (connect-src 'none') blocks direct fetches. Each URL is fetched
-   via an ephemeral <iframe sandbox="allow-scripts" src="blob:…"> — its own opaque
-   origin, so it can fetch but cannot touch this page's DOM, IndexedDB, or cookies.
-   Bytes come back via postMessage only; the iframe is destroyed after each fetch. */
-function fetchViaSandbox(url) {
-  return new Promise((resolve, reject) => {
-    const id = "sf" + (++sandId);
-    const html = `<!doctype html><script>
-      fetch(${JSON.stringify(url)})
-        .then(async r => {
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          const buf = await r.arrayBuffer();
-          parent.postMessage({ id: ${JSON.stringify(id)}, ok: true, buf }, "*");
-        })
-        .catch(e => parent.postMessage({ id: ${JSON.stringify(id)}, ok: false, err: String(e) }, "*"));
-    <\/script>`;
-    const frame = el("iframe", { sandbox: "allow-scripts", style: "display:none", src: URL.createObjectURL(new Blob([html], { type: "text/html" })) });
-    const cleanup = () => { clearTimeout(timer); URL.revokeObjectURL(frame.src); frame.remove(); };
-    const timer = setTimeout(() => { cleanup(); reject(new Error("fetch timed out")); }, 30000);
-    const handler = e => {
-      if (e.source !== frame.contentWindow || !e.data || e.data.id !== id) return;
-      cleanup(); window.removeEventListener("message", handler);
-      e.data.ok ? resolve(e.data.buf) : reject(new Error(e.data.err || "fetch failed"));
-    };
-    window.addEventListener("message", handler);
-    document.body.append(frame);
-  });
-}
-let sandId = 0;
-
+/* ---------------- web links ----------------
+   The CSP allows connect-src https:/http: so the page can fetch from URLs the user
+   pastes. Every CDN script carries an integrity hash; a compromised CDN is blocked. */
 function addLinkRow(url = "") {
   const row = el("div", { class: "linkRow" },
     el("input", { type: "url", placeholder: "https://portal.example/document.pdf", value: url,
@@ -1330,7 +1308,9 @@ async function fetchLinks() {
   for (let i = 0; i < urls.length; i++) {
     showLinkStatus(`Fetching ${i + 1} of ${urls.length}…`);
     try {
-      const buf = await fetchViaSandbox(urls[i]);
+      const res = await fetch(urls[i]);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const buf = await res.arrayBuffer();
       let name;
       try { name = decodeURIComponent(new URL(urls[i]).pathname.split("/").filter(Boolean).pop() || "document.pdf"); }
       catch { name = "document.pdf"; }

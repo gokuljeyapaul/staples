@@ -31,20 +31,21 @@ standard access logs (IP, timestamp) for serving the page itself.
 
 Two more guarantees, both machine-checked:
 
-- **The browser refuses to leak.** The app ships a strict Content-Security-Policy
-  with `connect-src 'none'`: no fetch, XHR or WebSocket to anywhere can succeed,
-  even if the code tried. The e2e suite fails if any request goes beyond the
-  pinned files above. Script sources are pinned to this file and cdnjs; the one
-  allowance is `unsafe-eval`, needed by the HEIC decoder's WASM glue —
-  connections stay forbidden regardless.
+- **The browser refuses to run unverified code.** Every CDN script carries a Sub-resource
+  Integrity hash (`integrity=...`), so a compromised CDN serving different code is
+  browser-blocked before it executes. The e2e suite fails if any request goes beyond
+  the pinned files above. `connect-src` allows fetching from https URLs you paste
+  (the web-links feature) — that’s the one outbound connection the app can make, and
+  only from links you explicitly provide.
 - **It works offline.** After the first visit a network-first service worker
   answers from its cache only when the network fails. Online behaviour is
   identical to a browser without it, and it never sends anything.
-- **URL fetching uses a sandboxed iframe.** When you paste a web link, the app
-  creates an ephemeral `<iframe sandbox="allow-scripts">` — its own opaque origin,
-  unable to touch this page's DOM, IndexedDB, or cookies. It fetches only the URL
-  you pasted, sends the bytes back via `postMessage`, and is destroyed. The main
-  page's strict `connect-src 'none'` remains in force at all times.
+- **Web links fetch from the URLs you paste.** When you use the inline web-links
+  feature, the app fetches directly from the https URLs you provide — those hosts
+  see your IP, as with any download. The fetched documents land in the same local
+  IndexedDB as dropped files and never leave your device. `connect-src` allows
+  this and nothing else: no analytics endpoints, no telemetry, no third-party
+  scripts beyond the pinned libraries above.
 
 ## Where your data lives
 

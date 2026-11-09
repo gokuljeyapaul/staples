@@ -68,7 +68,7 @@ back in charge.
 - Light/dark theme: follows your system until you decide otherwise
 
 **Privacy & platform**
-- Strict Content-Security-Policy with `connect-src 'none'` — the browser itself refuses any outbound data connection, and a CI test asserts only the pinned CDN files are ever requested
+- Strict Content-Security-Policy with Sub-resource Integrity: every CDN script carries an `integrity` hash so a compromised CDN is browser-blocked; `connect-src` allows only https URLs you paste (the web-links feature), and a CI test asserts no request goes beyond the pinned CDN and the pasted URLs
 - Works offline after the first visit, installable on phones (PWA) — the service worker is a network-first cache that answers only when the network fails
 
 ## Limitations

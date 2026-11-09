@@ -25,7 +25,7 @@ test.describe("privacy guarantees", () => {
 });
 
 test.describe("add from web links", () => {
-  test("inline: pasted links fetch into the pile via the sandboxed iframe, same page", async ({ page }) => {
+  test("inline: pasted links fetch into the pile on the same page", async ({ page }) => {
     await page.goto("/staple.html");
     await page.waitForFunction(() => window.Staple && window.StapleCore);
     await page.click("#linksToggle");
